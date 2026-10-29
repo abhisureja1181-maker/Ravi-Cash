@@ -1,0 +1,21 @@
+# Render "Blueprint": one click creates the Ravi Cash web service with a permanent disk.
+# Render dashboard -> New + -> Blueprint -> pick your GitHub copy of this folder -> Apply.
+# Needs a PAID instance (a disk is not available on the free one). See EASY-ONLINE.md.
+services:
+  - type: web
+    name: ravi-cash
+    runtime: docker
+    region: singapore            # closest to India; change it if you like
+    plan: 0.5c-512mb             # smallest paid instance
+    healthCheckPath: /api/health
+    envVars:
+      - key: SETUP_KEY           # Render generates it; you paste it once on the first-time setup screen
+        generateValue: true
+      - key: PORT
+        value: "10000"
+      - key: DATA_DIR
+        value: /data
+    disk:
+      name: ravi-data            # database, receipt photos and backups live here and survive restarts / updates
+      mountPath: /data
+      sizeGB: 1

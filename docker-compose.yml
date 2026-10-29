@@ -1,0 +1,30 @@
+# Ravi Cash online: the app + Caddy, which gets and renews the HTTPS certificate by itself.
+# Needs a file named .env next to this one containing:  DOMAIN=cash.yourdomain.com
+# (optional second line:  SETUP_KEY=some-long-secret   - stops strangers from doing the first-time setup before you)
+name: ravicash
+services:
+  app:
+    build: .
+    restart: always
+    environment:
+      - SETUP_KEY=${SETUP_KEY:-}   # optional: first-time setup then asks for this key
+    volumes:
+      - ravi-data:/data          # database, receipt photos and rotating backups live here
+  caddy:
+    image: caddy:2
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - DOMAIN=${DOMAIN:?Create a .env file with DOMAIN=your.domain.name}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - app
+volumes:
+  ravi-data:
+  caddy-data:
+  caddy-config:

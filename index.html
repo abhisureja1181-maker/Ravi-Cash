@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Ravi Cash — Cash Management</title>
+  <meta name="description" content="Ravi Water Flow Pump — secure, real-time, multi-branch cash voucher and cash register management.">
+  <meta name="theme-color" content="#0B2A4A">
+  <meta name="color-scheme" content="light dark">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Ravi Cash">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="preload" href="fonts/Inter-Regular.woff" as="font" type="font/woff" crossorigin>
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+  <link rel="stylesheet" href="css/app.css">
+  <link rel="stylesheet" href="css/login.css">
+  <script>
+    /* Apply the saved theme before first paint so there is no light/dark flash. */
+    try { if (localStorage.getItem('rw.theme') === 'dark') document.documentElement.dataset.theme = 'dark'; } catch (e) {}
+  </script>
+  <noscript><style>#splash{display:none}</style></noscript>
+</head>
+<body>
+  <div id="splash" class="splash" role="status" aria-live="polite">
+    <div class="splash-in">
+      <div class="splash-logo" id="splash-logo"></div>
+      <h1>RAVI CASH</h1>
+      <p>Loading secure workspace…</p>
+      <div class="splash-bar"><i></i></div>
+    </div>
+  </div>
+  <div id="app"></div>
+  <noscript><p style="padding:24px;font-family:sans-serif">Ravi Cash needs JavaScript to run. Please enable it and reload.</p></noscript>
+
+  <script src="config.js"></script>
+  <script src="js/util.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/server-core.js"></script>
+  <script src="js/server-vouchers.js"></script>
+  <script src="js/server-admin.js"></script>
+  <script src="js/server-erase.js"></script>
+  <script src="js/server-tours.js"></script>
+  <script src="js/server-location.js"></script>
+  <script src="js/seed.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/pdf.js"></script>
+  <script src="js/voucher.js"></script>
+  <script src="js/pdf-docs.js"></script>
+  <script src="js/export.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/images.js"></script>
+  <script src="vendor/leaflet/leaflet.js"></script>
+  <script src="js/map.js"></script>
+  <script src="js/tracker.js"></script>
+  <script src="js/views/common.js"></script>
+  <script src="js/views/login.js"></script>
+  <script src="js/views/dashboard.js"></script>
+  <script src="js/views/vouchers.js"></script>
+  <script src="js/views/voucher-form.js"></script>
+  <script src="js/views/voucher-detail.js"></script>
+  <script src="js/views/cash.js"></script>
+  <script src="js/views/admin.js"></script>
+  <script src="js/views/reports.js"></script>
+  <script src="js/views/misc.js"></script>
+  <script src="js/views/ceo.js"></script>
+  <script src="js/views/tours.js"></script>
+  <script src="js/views/livemap.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    /* A sandboxed preview (an iframe without "allow-forms") blocks form submission before the app can handle it.
+       There, run the form's own submit handler directly. Normal browsers are not affected. */
+    try {
+      if (window.origin === 'null' && location.protocol !== 'file:') {
+        document.addEventListener('click', function (e) {
+          var b = e.target && e.target.closest && e.target.closest('button[type=submit],input[type=submit]');
+          if (!b || !b.form || b.disabled) return;
+          e.preventDefault();
+          var f = b.form;
+          if (!f.noValidate && f.checkValidity && !f.checkValidity()) { if (f.reportValidity) f.reportValidity(); return; }
+          f.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+        }, true);
+      }
+    } catch (e) { /* ignore */ }
+  </script>
+  <script>
+    (function () {
+      var logo = document.getElementById('splash-logo');
+      try { logo.appendChild(RW.v.logo(84, 'light')); } catch (e) {}
+      RW.app.boot();
+      try {
+        if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+          window.addEventListener('load', function () { try { navigator.serviceWorker.register('sw.js').catch(function () {}); } catch (e) {} });
+        }
+      } catch (e) { /* sandboxed preview: no service worker */ }
+    })();
+  </script>
+</body>
+</html>

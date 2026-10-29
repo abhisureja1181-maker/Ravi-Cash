@@ -1,0 +1,22 @@
+{
+  "name": "Ravi Cash — Cash Management",
+  "short_name": "Ravi Cash",
+  "description": "Ravi Water Flow Pump — secure, real-time, multi-branch cash voucher and cash register management.",
+  "id": "./",
+  "start_url": "./#/dashboard",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#FFFFFF",
+  "theme_color": "#0B2A4A",
+  "categories": ["business", "finance", "productivity"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Create Voucher", "short_name": "New", "url": "./#/vouchers/new", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Cash Register", "short_name": "Cash", "url": "./#/register", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] }
+  ]
+}
