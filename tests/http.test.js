@@ -39,7 +39,10 @@ test('static hosting: app files, CSP with script hashes, no path traversal, conf
     assert.match(csp, /frame-ancestors 'none'/);
     assert.equal(idx.headers.get('x-content-type-options'), 'nosniff');
     assert.equal(idx.headers.get('x-frame-options'), 'DENY');
+    // The Live Map's OpenStreetMap background is refused when the browser sends no Referer, so the policy must NOT be 'no-referrer'.
+    assert.equal(idx.headers.get('referrer-policy'), 'strict-origin-when-cross-origin');
     const html = await idx.text();
+    assert.match(html, /<meta name="referrer" content="strict-origin-when-cross-origin">/);
     assert.match(html, /Ravi Cash/);
     const cfg = await (await fetch(base + '/config.js')).text();
     assert.match(cfg, /"mode":"server"/);

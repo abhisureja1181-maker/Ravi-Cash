@@ -22,7 +22,7 @@
     const L = g.L;
     const map = L.map(host, { zoomControl: true, attributionControl: true, worldCopyJump: false, zoomSnap: 0.5, tap: false })
       .setView(o.center || [22.9, 78.6], o.zoom || 5);
-    const tiles = L.tileLayer(M.tileUrl(), { maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors' }).addTo(map);
+    const tiles = L.tileLayer(M.tileUrl(), { maxZoom: 19, referrerPolicy: 'strict-origin-when-cross-origin', attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors' }).addTo(map);
     let bad = 0, good = 0;
     const note = h('div', { class: 'map-offline-note', hidden: true }, UI.icon('alert', 14), 'The street map needs internet. Positions below are still correct.');
     host.appendChild(note);

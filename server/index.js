@@ -88,7 +88,9 @@ function createApp(opts) {
   function secHeaders(h) {
     h['X-Content-Type-Options'] = 'nosniff';
     h['X-Frame-Options'] = 'DENY';
-    h['Referrer-Policy'] = 'no-referrer';
+    // NOT 'no-referrer': OpenStreetMap (the Live Map background) refuses requests that carry no Referer ("Access blocked ... tile usage policy").
+    // 'strict-origin-when-cross-origin' sends only this site's address (no page path, no sign-in data) to other sites, and nothing at all on plain http -> https downgrades.
+    h['Referrer-Policy'] = 'strict-origin-when-cross-origin';
     h['Permissions-Policy'] = 'camera=(self), microphone=(), geolocation=(self), payment=()';
     h['Cross-Origin-Opener-Policy'] = 'same-origin';
     if (env.PUBLIC_HTTPS === '1') h['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains';
