@@ -14,18 +14,61 @@
     const STATUSES = ['ACTIVE', 'INACTIVE', 'SUSPENDED'];
 
     /* ================================================================ branches */
+    // The "Main" branch is the first one ever created (head office); every later branch is a separate set of books.
+    const isMainBranch = (s, b) => !!(s.branches[0] && s.branches[0].id === b.id);
     function branchStats(s, b, from, to) {
       const t = totalsOf(s.vouchers.filter((v) => v.branchId === b.id && (!from || v.date >= from) && (!to || v.date <= to)));
       const all = totalsOf(s.vouchers.filter((v) => v.branchId === b.id));
       const opening = s.registers.reduce((a, r) => { const u = userById(s, r.userId); return u && u.branchId === b.id ? a + r.openingPaise : a; }, 0);
       return {
         id: b.id, code: b.code, name: b.name, address: b.address, contact: b.contact, status: b.status, createdAt: b.createdAt,
+        isMain: isMainBranch(s, b),
         userCount: s.users.filter((u) => u.branchId === b.id && !u.deleted && u.status === 'ACTIVE').length,
         inPaise: t.inPaise, outPaise: t.outPaise, netPaise: t.netPaise, count: t.count,
         balancePaise: opening + all.netPaise, openingPaise: opening,
       };
     }
     H.branchStats = branchStats;
+
+    /* Branch-wise books: for each branch the cash in / out / balance of the whole branch, then of every user (cash register) in it, kept apart.
+     * One pass over the vouchers. Whatever the listed users do not add up to (users removed earlier) is shown as one extra line so the totals always agree. */
+    function booksFor(s, u, from, to, onlyBranchId) {
+      const byUser = new Map(), allByUser = new Map();
+      for (const v of s.vouchers) {
+        if (!H.counted(v)) continue;
+        const a = allByUser.get(v.userId) || { i: 0, o: 0 };
+        if (v.type === 'RECEIPT') a.i += v.amountPaise; else a.o += v.amountPaise;
+        allByUser.set(v.userId, a);
+        if ((from && v.date < from) || (to && v.date > to)) continue;
+        const r = byUser.get(v.userId) || { i: 0, o: 0, n: 0 };
+        if (v.type === 'RECEIPT') r.i += v.amountPaise; else r.o += v.amountPaise;
+        r.n++; byUser.set(v.userId, r);
+      }
+      const total = { inPaise: 0, outPaise: 0, netPaise: 0, count: 0, balancePaise: 0, openingPaise: 0, userCount: 0 };
+      const rows = H.scopeBranches(s, u).filter((b) => !onlyBranchId || b.id === onlyBranchId).map((b) => {
+        const st = branchStats(s, b, from, to);
+        const users = s.users.filter((x) => !x.deleted && x.branchId === b.id && canSeeUser(u, x) && (H.registerOf(s, x.id) || allByUser.has(x.id)))
+          .map((x) => {
+            const reg = H.registerOf(s, x.id), r = byUser.get(x.id) || { i: 0, o: 0, n: 0 }, a = allByUser.get(x.id) || { i: 0, o: 0 };
+            return { id: x.id, fullName: x.fullName, username: x.username, role: x.role, status: x.status, designation: x.designation || '', registerId: reg ? reg.id : null,
+              inPaise: r.i, outPaise: r.o, netPaise: r.i - r.o, count: r.n, openingPaise: reg ? reg.openingPaise : 0, balancePaise: (reg ? reg.openingPaise : 0) + a.i - a.o,
+              lastActivityAt: x.lastActivityAt || null };
+          })
+          .sort((x, y) => (x.role === 'BRANCH_ADMIN' ? 0 : 1) - (y.role === 'BRANCH_ADMIN' ? 0 : 1) || x.fullName.localeCompare(y.fullName));
+        const sum = (k) => users.reduce((q, x) => q + x[k], 0);
+        const rest = { inPaise: st.inPaise - sum('inPaise'), outPaise: st.outPaise - sum('outPaise'), count: st.count - sum('count'), openingPaise: st.openingPaise - sum('openingPaise'), balancePaise: st.balancePaise - sum('balancePaise') };
+        if (rest.inPaise || rest.outPaise || rest.count || rest.balancePaise) {
+          users.push({ id: '_former', fullName: 'Removed users', username: '', role: '', status: 'INACTIVE', designation: 'Earlier entries of users who were removed', registerId: null, former: true,
+            inPaise: rest.inPaise, outPaise: rest.outPaise, netPaise: rest.inPaise - rest.outPaise, count: rest.count, openingPaise: rest.openingPaise, balancePaise: rest.balancePaise, lastActivityAt: null });
+        }
+        total.inPaise += st.inPaise; total.outPaise += st.outPaise; total.count += st.count; total.balancePaise += st.balancePaise; total.openingPaise += st.openingPaise; total.userCount += st.userCount;
+        return { id: b.id, code: b.code, name: b.name, status: b.status, isMain: st.isMain, inPaise: st.inPaise, outPaise: st.outPaise, netPaise: st.netPaise, count: st.count,
+          openingPaise: st.openingPaise, balancePaise: st.balancePaise, userCount: st.userCount, users };
+      });
+      total.netPaise = total.inPaise - total.outPaise;
+      return { from, to, branches: rows, total };
+    }
+    H.booksFor = booksFor;
 
     function makeBranchCode(s, name) {
       const tail = String(name).split(/\s[-–—]\s/).pop().replace(/[^A-Za-z0-9 ]/g, '').trim();
@@ -52,19 +95,28 @@
       return { rows: list };
     });
 
+    /* Creating a branch also creates the branch's OWN sign-in (a Branch Admin with a password of its own). The branch and the
+     * sign-in are checked first and created together, so there is never a branch without its login (or a login without its branch). */
     def('branches.create', { w: true, roles: ['SUPER_ADMIN'] }, async (ctx, p) => {
       const s = ctx.state;
       const name = cleanText(p.name, 3, 100, 'Branch name');
       let code = p.code ? String(p.code).trim().toUpperCase() : makeBranchCode(s, name);
       if (!/^[A-Z0-9]{2,10}$/.test(code)) throw new ApiError('VALIDATION', 'Branch code must be 2-10 letters or digits');
       if (s.branches.some((b) => b.code === code)) throw new ApiError('CONFLICT', 'Branch code ' + code + ' is already used');
-      const b = {
-        id: RW.uid('br'), code, regPrefix: makeRegPrefix(s, code), name, address: cleanText(p.address || '-', 1, 300, 'Address'),
-        contact: cleanText(p.contact || '-', 1, 100, 'Contact'), status: 'ACTIVE', createdAt: nowIso(),
-      };
+      const address = cleanText(p.address || '-', 1, 300, 'Address'), contact = cleanText(p.contact || '-', 1, 100, 'Contact');
+      const ad = p.admin && typeof p.admin === 'object' ? p.admin : null;
+      if (ad) checkNewUser(s, ad, 'BRANCH_ADMIN', { optionalEmail: true });   // refuses before anything is created
+      const b = { id: RW.uid('br'), code, regPrefix: makeRegPrefix(s, code), name, address, contact, status: 'ACTIVE', createdAt: nowIso() };
       s.branches.push(b);
       await audit(ctx, { entity: 'BRANCH', entityId: b.id, entityLabel: b.name, action: 'CREATE', branchId: b.id, new: { code: b.code, name: b.name } });
-      return { branch: branchStats(s, b) };
+      const out = { branch: branchStats(s, b) };
+      if (ad) {
+        const r = await addUser(ctx, b, 'BRANCH_ADMIN', ad, { optionalEmail: true });
+        out.admin = pubUser(s, r.user);
+        out.tempPassword = r.tempPassword;
+        out.branch = branchStats(s, b);
+      }
+      return out;
     });
 
     def('branches.update', { w: true, roles: ['SUPER_ADMIN'] }, async (ctx, p) => {
@@ -102,10 +154,11 @@
     }
     H.nextRegisterId = nextRegisterId;
 
-    function checkUserFields(s, p, existing) {
+    function checkUserFields(s, p, existing, opts) {
       const out = {};
       if (!existing || p.fullName !== undefined) out.fullName = cleanText(p.fullName, 3, 80, 'Full name');
-      if (!existing || p.email !== undefined) {
+      if ((!existing || p.email !== undefined) && !String(p.email || '').trim() && opts && opts.optionalEmail) out.email = '';   // a branch sign-in need not have an email
+      else if (!existing || p.email !== undefined) {
         const e = String(p.email || '').trim().toLowerCase();
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e)) throw new ApiError('VALIDATION', 'Enter a valid email address');
         if (s.users.some((u) => !u.deleted && u.id !== (existing && existing.id) && (u.email || '').toLowerCase() === e)) throw new ApiError('CONFLICT', 'This email is already used by another user');
@@ -157,21 +210,21 @@
       return { rows };
     });
 
-    def('users.create', { w: true, roles: ['SUPER_ADMIN'] }, async (ctx, p) => {
-      const s = ctx.state, actor = ctx.user;
-      const role = p.role || 'USER';
+    /* Check everything about a new sign-in WITHOUT changing anything, so a failure part-way never leaves half a branch or user behind. */
+    function checkNewUser(s, p, role, opts) {
       if (!ROLES.includes(role)) throw new ApiError('VALIDATION', 'Invalid role');
-      if (!isSuper(actor) && !(role === 'USER' || role === 'VIEWER')) throw new ApiError('FORBIDDEN', 'You can only create Users and Viewers');
-      const branchId = isSuper(actor) ? p.branchId : actor.branchId;
-      const branch = branchById(s, branchId);
-      if (!branch) throw new ApiError('VALIDATION', 'Choose a branch');
       const username = String(p.username || '').trim().toLowerCase();
       if (!/^[a-z0-9._-]{3,32}$/.test(username)) throw new ApiError('VALIDATION', 'Username: 3-32 characters (letters, numbers, . _ -)');
       if (s.users.some((u) => !u.deleted && u.username === username)) throw new ApiError('CONFLICT', 'Username "' + username + '" is already taken');
-      const f = checkUserFields(s, p, null);
+      const f = checkUserFields(s, p, null, opts);
       const temp = p.password ? null : RW.randomPassword();
       const password = p.password || temp;
       H.checkPassword(password);
+      return { username, f, temp, password };
+    }
+    async function addUser(ctx, branch, role, p, opts) {
+      const s = ctx.state, actor = ctx.user;
+      const { username, f, temp, password } = checkNewUser(s, p, role, opts);
       const u = Object.assign({
         id: RW.uid('u'), username, branchId: branch.id, role, status: 'ACTIVE', createdAt: nowIso(), createdBy: actor.id,
         mustChangePassword: true, deleted: false, lastLoginAt: null, lastActivityAt: null,
@@ -180,7 +233,20 @@
       if (!NO_REGISTER.includes(role)) s.registers.push({ id: nextRegisterId(s, branch, u.fullName), userId: u.id, branchId: branch.id, openingPaise: 0, createdAt: nowIso() });
       await audit(ctx, { entity: 'USER', entityId: u.id, entityLabel: u.fullName + ' (' + u.username + ')', action: 'CREATE', branchId: branch.id, new: { username, role, branch: branch.name } });
       notify(ctx, { kind: 'USER_CREATED', title: 'New user created', body: u.fullName + ' (' + role.replace('_', ' ').toLowerCase() + ') added to ' + branch.name, branchId: branch.id });
-      return { user: pubUser(s, u), tempPassword: temp };
+      return { user: u, tempPassword: temp };
+    }
+    H.addUser = addUser;
+
+    def('users.create', { w: true, roles: ['SUPER_ADMIN'] }, async (ctx, p) => {
+      const s = ctx.state, actor = ctx.user;
+      const role = p.role || 'USER';
+      if (!ROLES.includes(role)) throw new ApiError('VALIDATION', 'Invalid role');
+      if (!isSuper(actor) && !(role === 'USER' || role === 'VIEWER')) throw new ApiError('FORBIDDEN', 'You can only create Users and Viewers');
+      const branchId = isSuper(actor) ? p.branchId : actor.branchId;
+      const branch = branchById(s, branchId);
+      if (!branch) throw new ApiError('VALIDATION', 'Choose a branch');
+      const r = await addUser(ctx, branch, role, p);
+      return { user: pubUser(s, r.user), tempPassword: r.tempPassword };
     });
 
     /* First-run setup for a real (non-demo) installation: creates the first branch and Super Admin.
@@ -452,8 +518,8 @@
         byUser: [...byUser.values()].sort((a, b) => b.collectedPaise + b.paidPaise - (a.collectedPaise + a.paidPaise)),
       };
     }
-    H.outstandingTotalFor = (s, u) => {
-      const items = s.outstanding.filter((o) => seesAll(u) || o.branchId === u.branchId);
+    H.outstandingTotalFor = (s, u, branchId) => {
+      const items = s.outstanding.filter((o) => (seesAll(u) || o.branchId === u.branchId) && (!branchId || o.branchId === branchId));
       return outstandingSummary(s, items, todayIst()).total.totalPaise;
     };
 
@@ -577,11 +643,12 @@
       for (let i = n - 1; i >= 0; i--) { const f = RW.addMonths(start, -i); const t = RW.endOfMonth(f); const r = sumDays(m, f, t > today ? today : t); out.push({ date: f, label: RW.MONTHS[+f.slice(5, 7) - 1] + " '" + f.slice(2, 4), inPaise: r.inPaise, outPaise: r.outPaise, count: r.count }); }
       return out;
     }
-    function balanceTrend(s, u, list, today, n) {
+    function balanceTrend(s, u, list, today, n, branchId) {
       let base = 0;
       for (const r of s.registers) {
         const ru = userById(s, r.userId);
         if (!ru) continue;
+        if (branchId && ru.branchId !== branchId) continue;
         if (level(u) === 'ALL' || (level(u) === 'BRANCH' && ru.branchId === u.branchId) || (level(u) === 'SELF' && ru.id === u.id)) base += r.openingPaise;
       }
       const m = dayMap(list);
@@ -607,13 +674,17 @@
     def('dashboard.get', {}, async (ctx, p) => {
       const s = ctx.state, u = ctx.user;
       const today = todayIst(), fy = s.settings.fiscalYearStartMonth;
-      const list = filterVouchers(s, u, {});
+      // The main admin (and CEO) can look at ONE branch's books at a time; everyone else only ever sees their own scope.
+      // p.branchId: a branch id, 'main' (the head-office branch) or 'all'/empty (whole company together)
+      let scopeId = '';
+      if (level(u) === 'ALL' && p && p.branchId && p.branchId !== 'all') { const sb = p.branchId === 'main' ? s.branches[0] : branchById(s, p.branchId); if (sb) scopeId = sb.id; }
+      const list = filterVouchers(s, u, scopeId ? { branchId: scopeId } : {});
       const m = dayMap(list);
       const R = (k) => RW.rangeFor(k, today, fy);
       const per = (k) => { const r = R(k); const t = sumDays(m, r.from, r.to); return Object.assign({ label: r.label, from: r.from, to: r.to }, t); };
       const charts = {
         daily14: seriesDaily(m, today, 14), weekly8: seriesWeekly(m, today, 8), monthly12: seriesMonthly(m, today, 12),
-        voucherCount14: seriesDaily(m, today, 14).map((d) => ({ date: d.date, label: d.label, count: d.count })), balanceTrend30: balanceTrend(s, u, list, today, 30),
+        voucherCount14: seriesDaily(m, today, 14).map((d) => ({ date: d.date, label: d.label, count: d.count })), balanceTrend30: balanceTrend(s, u, list, today, 30, scopeId),
       };
       const recent = list.filter((v) => v.status !== 'DELETED').slice(0, level(u) === 'SELF' ? 8 : 10).map((v) => vView(s, v));
       const out = { role: u.role, level: level(u), today, periods: { today: per('today'), week: per('week'), month: per('month'), year: per('year') }, charts, recent };
@@ -627,14 +698,16 @@
       const range = R(kr === 'all' ? 'all' : ['today', 'week', 'month', 'year'].includes(kr) ? kr : 'month');
       const k = sumDays(m, range.from, range.to);
       const brs = H.scopeBranches(s, u);
-      const activeUsers = s.users.filter((x) => !x.deleted && x.status === 'ACTIVE' && canSeeUser(u, x)).length;
+      const activeUsers = s.users.filter((x) => !x.deleted && x.status === 'ACTIVE' && canSeeUser(u, x) && (!scopeId || x.branchId === scopeId)).length;
       out.kpiRange = { key: kr, label: range.label, from: range.from, to: range.to };
       out.kpis = Object.assign({}, k, {
-        balancePaise: scopeOpening(s, u) + sumDays(m, '2000-01-01', today).netPaise,
-        outstandingPaise: isAdmin(u) ? H.outstandingTotalFor(s, u) : null,
+        balancePaise: scopeOpening(s, u, scopeId) + sumDays(m, '2000-01-01', today).netPaise,
+        outstandingPaise: isAdmin(u) ? H.outstandingTotalFor(s, u, scopeId) : null,
         activeUsers, activeBranches: brs.filter((b) => b.status === 'ACTIVE').length,
       });
       out.branches = brs.map((b) => branchStats(s, b, range.from, range.to));
+      out.scope = scopeId ? { branchId: scopeId, name: branchById(s, scopeId).name, isMain: isMainBranch(s, branchById(s, scopeId)) } : { branchId: '' };
+      out.books = booksFor(s, u, range.from, range.to > today ? today : range.to, scopeId);
       return out;
     });
 

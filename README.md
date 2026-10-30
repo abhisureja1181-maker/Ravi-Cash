@@ -80,6 +80,15 @@ users/branches lose access immediately.
 
 * **Company logo** — the Ravi water flow PUMP logo (`app/img/logo.jpg`, `logo-mark.jpg`) is on the voucher (screen, print and PDF), on every statement / report PDF,
   on the sign-in page, in the menu and in the phone-app icon. To change it, replace those two files (white background, JPEG) and the icons in `app/icons/`.
+* **Branch-wise books and the branch's own sign-in** (new in 5.3):
+  * **Dashboard of the main admin / CEO** — a row of buttons *Main · Indore · Nagpur · … · All together* chooses whose books are shown. The cards, the charts, the recent vouchers and the outstanding total then belong to
+    **that branch only** (Main shows only the Main branch's cash — the other branches are no longer mixed in). The choice is remembered on that device. *All together* is the whole company.
+  * **Branch-wise accounts** — under the cards, every branch is its own block (cash in, cash out, net, balance) and below it **each user's own account** (cash register id, cash in / out / balance for the chosen period).
+    A *Company total* line closes the list; the branch blocks always add up to it. Entries of users who were later removed are shown as one "Removed users" line so nothing is hidden. Click a branch to open only its books; a user to open
+    the activity report. A Branch Admin sees the same for their own branch only. The first branch ever created is the **Main** branch.
+  * **Add Branch creates the branch's sign-in too** — the form asks for the branch admin's name, a username and (optionally) a password; empty = one is generated and shown once. The branch and its login are created together
+    (if the username is taken or the password is weak nothing is created). The branch admin signs in with the **branch code + that username + that password**, must choose a new password at first sign-in, and sees only
+    their own branch. Email and mobile are optional for this login. More users can be added to the branch later from *Users*.
 * **Tours** (`#/tours`; in the menu for everybody, in the bottom bar of the phone app for Users) — two parts:
   * **Tour Plan (advance plan)** — for a tour of any length (up to 60 days) choose the from / to dates; the app opens one card per day. For each day write the **place(s)** and the **parties you will meet**
     (party name, address, phone, purpose). Tick *No visit this day* for a rest day. Parties met before are suggested while typing and fill their own address / phone.
@@ -106,6 +115,10 @@ users/branches lose access immediately.
     *Not now* or a blocked permission is not hidden: the admin sees "Location off". Positions are kept for **30 days** (7–90, *Settings → Live location*), where the main admin can also switch the whole feature **off**. Deleting a user, a branch or *Reset entire system* erases their locations too.
   * **Limits to know** — it is a web app, so it can only send the position **while the app is open and signed in** (about once a minute, sooner after moving 150 m); it cannot track a closed or locked phone — that needs a native Android app. A phone's GPS can be faked with a "mock location" app; the accuracy of each position is stored and a stale one is flagged.
     The street background comes from OpenStreetMap and **needs internet** (the markers and routes stay correct without it, and a notice says so); OpenStreetMap's free servers are for light use only — for heavy use set your own tile server with `MAP_TILE_URL`. The map library (Leaflet 1.9.4, BSD-2) is shipped inside the app (`app/vendor/leaflet`).
+  * **Phone hardening (5.3)** — the app retries by itself when the first call after sign-in fails on a weak network (the chip shows *Connecting…*); an "Allow" answer that did not reach the server is sent again and also
+    travels with the first position; the position is sent the moment the person leaves the app (another app, lock screen), so the admin sees where they were when it went quiet; the notice is shown only **after** the first
+    password change. The **Profile** page of Users and Branch Admins has a *Live location* card: status, phone permission, when the last position reached the company, any error, a **Send my location now** button, and an optional
+    *Keep the screen on while the app is open* switch (uses more battery, helps during a tour). On the Live Map an *Offline* person is one whose app is closed or phone is off / out of signal.
   * Positions are stored outside the main database file (`loc`, `trail:<date>`), so a ping every minute does not rewrite the data or wake every screen. In `Ravi-Cash-DEMO.html` the map shows sample staff; real tracking across phones needs the server.
 * **CEO Dashboard** (`#/ceo`; the CEO's home page, also open to the main admin) — one page for the whole company: *Needs your attention* (negative cash registers, overdue money, payments
   waiting for review, large payments, Not valid payments, branches silent today, staff silent 7+ days, failed sign-ins, corrections by the main admin), company cash in hand, cash in / out / net with the
@@ -246,7 +259,7 @@ Copy the new files over, run `npm run build` (this stamps a new version so insta
 ## 5. Tests
 
 ```bash
-npm test          # 86 tests: business rules, HTTP server, storage, exports, live location, static-app integrity
+npm test          # 93 tests: business rules, HTTP server, storage, exports, live location, static-app integrity
 npm run test:db   # database tests on a throw-away local PostgreSQL (needs postgres 15/16 server binaries)
 ```
 

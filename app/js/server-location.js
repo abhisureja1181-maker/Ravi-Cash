@@ -98,6 +98,8 @@
         const doc = await readLoc();
         const rec = doc.users[u.id] || (doc.users[u.id] = {});
         if (rec.consent === 'DECLINED') return { ok: true, off: true };          // the person said no: nothing is stored
+        // the phone only pings after the person pressed "Allow"; if that answer got lost on the way (weak network), the first ping carries it
+        if (!rec.consent && (p.consent === 1 || p.consent === true || p.consent === '1')) { rec.consent = 'GIVEN'; rec.consentAt = new Date(nowMs).toISOString(); }
         if (rec.at && nowMs - Date.parse(rec.at) < MIN_PING_MS) return { ok: true, throttled: true };
         Object.assign(rec, fix, { at: new Date(nowMs).toISOString(), devAt: devAt > 0 && Math.abs(devAt - nowMs) < 864e5 ? new Date(devAt).toISOString() : null, perm: 'GRANTED' });
         delete rec.demoAgeMin;

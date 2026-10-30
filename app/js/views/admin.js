@@ -28,12 +28,37 @@
     const code = h('input', { type: 'text', value: br.code || '', maxlength: 10, placeholder: 'Auto (e.g. PUNE)', disabled: !isNew, style: { textTransform: 'uppercase' } });
     const addr = h('textarea', { rows: 2, maxlength: 300, placeholder: 'Street, city, state, PIN' }); addr.value = br.address && br.address !== '-' ? br.address : '';
     const contact = h('input', { type: 'text', value: br.contact && br.contact !== '-' ? br.contact : '', maxlength: 100, placeholder: 'Phone / email' });
+    // A new branch gets its OWN sign-in (a Branch Admin) so its cash, users and accounts are kept apart from Main and every other branch.
+    const adName = isNew ? h('input', { type: 'text', maxlength: 80, placeholder: 'e.g. Rakesh Verma', autocomplete: 'off' }) : null;
+    const adUser = isNew ? h('input', { type: 'text', maxlength: 32, placeholder: 'e.g. pune.admin', autocomplete: 'off', autocapitalize: 'none' }) : null;
+    const adPw = isNew ? h('input', { type: 'text', placeholder: 'Leave empty to generate one', autocomplete: 'off' }) : null;
+    const adMobile = isNew ? h('input', { type: 'tel', maxlength: 14, placeholder: '10-digit mobile' }) : null;
+    const adEmail = isNew ? h('input', { type: 'email', placeholder: 'name@company.com' }) : null;
+    if (isNew) {
+      let typed = false;
+      adUser.addEventListener('input', () => { typed = true; });
+      code.addEventListener('input', () => { if (!typed && code.value.trim()) adUser.value = code.value.trim().toLowerCase().replace(/[^a-z0-9]/g, '') + '.admin'; });
+    }
+    const fName = isNew ? UI.field('Branch admin name', adName) : null, fUser = isNew ? UI.field('Username', adUser, { hint: 'Used to sign in. Cannot be changed later.' }) : null;
     UI.modal({ title: isNew ? 'Add branch' : 'Edit ' + br.name, size: 'md',
-      body: h('div', { class: 'form-grid' }, UI.field('Branch name', name, { class: 'span2' }), UI.field('Branch code', code, { hint: isNew ? 'Short unique code, used in register ids. Cannot be changed later.' : 'Cannot be changed' }), UI.field('Contact', contact), UI.field('Address', addr, { class: 'span2' })),
+      body: h('div', { class: 'form-grid' }, UI.field('Branch name', name, { class: 'span2' }), UI.field('Branch code', code, { hint: isNew ? 'Short unique code, used in register ids and at sign-in. Cannot be changed later.' : 'Cannot be changed' }), UI.field('Contact', contact), UI.field('Address', addr, { class: 'span2' }),
+        isNew ? h('div', { class: 'span2 form-sec' }, UI.icon('key', 16), h('div', null, h('b', null, 'This branch’s own sign-in'), h('small', null, 'The branch signs in with its branch code, this username and its own password. Its cash, users and accounts stay separate from Main and other branches.'))) : null,
+        isNew ? fName : null, isNew ? fUser : null,
+        isNew ? UI.field('Password', adPw, { optional: true, hint: 'The branch admin must change it at first sign-in.' }) : null, isNew ? UI.field('Mobile', adMobile, { optional: true }) : null,
+        isNew ? UI.field('Email', adEmail, { optional: true, class: 'span2' }) : null),
       actions: [{ label: 'Cancel' }, { label: isNew ? 'Create branch' : 'Save changes', kind: 'primary', keepOpen: true, onClick: async (m) => {
-        if (isNew) await RW.api.call('branches.create', { name: name.value, code: code.value || undefined, address: addr.value || undefined, contact: contact.value || undefined });
-        else await RW.api.call('branches.update', { id: br.id, name: name.value, address: addr.value || '-', contact: contact.value || '-' });
-        UI.toast(isNew ? 'Branch created. Add its first user next.' : 'Branch updated.', 'success'); m.close(); if (done) done();
+        if (isNew) {
+          UI.fieldError(fName, ''); UI.fieldError(fUser, '');
+          if (adName.value.trim().length < 3) { UI.fieldError(fName, 'Enter the branch admin’s name'); return false; }
+          if (!adUser.value.trim()) { UI.fieldError(fUser, 'Choose a username for this branch'); return false; }
+          const r = await RW.api.call('branches.create', { name: name.value, code: code.value || undefined, address: addr.value || undefined, contact: contact.value || undefined,
+            admin: { fullName: adName.value, username: adUser.value, password: adPw.value || undefined, mobile: adMobile.value, email: adEmail.value } });
+          m.close(); if (done) done();
+          credentialModal('Branch created', r.branch.name + ' is ready. Give these sign-in details to ' + r.admin.fullName + '. Sign in with branch code ' + r.branch.code + ', the username and the password below.', r.admin.username, r.tempPassword || '(the password you entered)');
+          return;
+        }
+        await RW.api.call('branches.update', { id: br.id, name: name.value, address: addr.value || '-', contact: contact.value || '-' });
+        UI.toast('Branch updated.', 'success'); m.close(); if (done) done();
       } }] });
   };
 

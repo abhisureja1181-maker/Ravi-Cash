@@ -124,10 +124,11 @@
 
     const pageHost = h('main', { id: 'main', tabindex: -1 });
     const mobile = nav.filter((n) => ['dashboard', 'ceo', 'vouchers', 'tours', 'all-vouchers', 'register', 'statements', 'profile'].includes(n.id) && n.id !== 'new' && (n.id !== 'ceo' || app.isCeo));
-    let bn = app.isAdmin ? mobile.filter((n) => n.id !== 'profile' && n.id !== 'tours').slice(0, 4) : mobile.slice(0, 5);
+    // Admins get 4 shortcuts + "More". Users and viewers get every shortcut, Profile included (it used to be pushed off the bar when Tours was added).
+    let bn = app.isAdmin ? mobile.filter((n) => n.id !== 'profile' && n.id !== 'tours').slice(0, 4) : mobile.slice(0, 6);
     const more = app.isAdmin ? h('button', { type: 'button', onclick: () => doc.body.classList.toggle('nav-open'), 'aria-label': 'More menu' }, UI.icon('menu', 21), 'More') : null;
-    const shortLabel = { 'My Vouchers': 'Vouchers', 'All Vouchers': 'Vouchers', 'Cash Register': 'Cash', Dashboard: 'Home', 'CEO Dashboard': 'CEO' };
-    const bnav = h('nav', { class: 'bnav', 'aria-label': 'Quick navigation' }, bn.map((n) => h('a', { href: n.href, dataset: { id: n.id } }, UI.icon(n.icon, 21), shortLabel[n.label] || n.label)), more);
+    const shortLabel = { 'My Vouchers': 'Vouchers', 'All Vouchers': 'Vouchers', 'Cash Register': 'Cash', Dashboard: 'Home', 'CEO Dashboard': 'CEO', Statements: 'Statement' };
+    const bnav = h('nav', { class: 'bnav' + (bn.length + (more ? 1 : 0) >= 6 ? ' n6' : ''), 'aria-label': 'Quick navigation' }, bn.map((n) => h('a', { href: n.href, dataset: { id: n.id } }, UI.icon(n.icon, 21), shortLabel[n.label] || n.label)), more);
     const fab = app.canCreate ? h('a', { class: 'fab', href: '#/vouchers/new', 'aria-label': 'Create voucher' }, UI.icon('plus', 22), 'Create Voucher') : null;
     const scrim = h('div', { class: 'scrim', onclick: () => doc.body.classList.remove('nav-open') });
     return { frag: [h('div', { class: 'app' }, side, h('div', { class: 'main' }, top, demoBar, pageHost)), bnav, fab, scrim], pageHost, top, create, fab };

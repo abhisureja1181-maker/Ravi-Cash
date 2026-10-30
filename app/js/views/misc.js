@@ -289,6 +289,55 @@
     return { dispose() { dead = true; } };
   }, { roles: ['SUPER_ADMIN'] });
 
+  /* ============================================ profile: live location of THIS phone */
+  function locationCard(app) {
+    const T = RW.tracker;
+    if (!T || !app.user || !['USER', 'BRANCH_ADMIN'].includes(app.user.role)) return null;
+    const body = h('div', { class: 'card-b stack', style: { gap: '14px' } }, UI.skeleton ? UI.skeleton(2) : null);
+    const el = h('div', { class: 'card', id: 'loc-card' }, h('div', { class: 'card-h' }, h('h3', null, 'Live location', h('small', null, 'Seen only by the main admin and the CEO, while this app is open'))), body);
+    const ago = (ms) => (ms ? RW.timeAgo(new Date(ms).toISOString()) : 'not yet');
+    let dead = false, busy = false;
+    async function paint() {
+      const d = await T.diag();
+      if (dead) return;
+      const st = d.state;
+      const [tone, label, help] = !d.supported ? ['gray', 'No GPS', 'This phone cannot give its location.']
+        : st === 'ON' || st === 'LOCATING' ? ['green', st === 'ON' ? 'Sharing now' : 'Finding you…', 'The admin can see where you are.']
+        : st === 'WAIT' ? ['amber', 'Connecting…', 'Could not reach the server yet. It keeps trying by itself.']
+        : st === 'BLOCKED' ? ['red', 'Blocked on this phone', 'Allow Location for this app in the phone settings, then tap “Try again”.']
+        : st === 'OFF' ? ['gray', 'Turned off', 'You chose not to share. The admin sees “location off”.']
+        : st === 'ASK' ? ['amber', 'Waiting for your answer', 'Tap “Turn on” to read what is shared and allow it.']
+        : d.enabled === false ? ['gray', 'Switched off by the company', 'Live location is not being collected right now.']
+        : ['gray', 'Not started', 'It starts after you sign in.'];
+      const permText = { granted: 'Allowed', denied: 'Blocked', prompt: 'Not asked yet' }[d.perm] || 'Unknown';
+      const lastText = d.okAt ? ago(d.okAt) + (d.acc ? ' · accuracy ±' + d.acc + ' m' : '') : 'Not sent yet';
+      const failing = d.err && d.errAt > d.okAt;
+      const row = (k, v, cls) => [h('dt', null, k), h('dd', { class: cls || '' }, v)];
+      const keep = d.canKeepAwake ? h('label', { class: 'row', style: { gap: '10px', flexWrap: 'nowrap', alignItems: 'flex-start' } },
+        h('input', { type: 'checkbox', checked: d.awake, onchange: (e) => { T.setKeepAwake(e.target.checked); UI.toast(e.target.checked ? 'The screen will stay on while this app is open.' : 'Screen can switch off again.', 'info'); } }),
+        h('span', null, h('b', null, 'Keep the screen on while the app is open'), h('small', { class: 'muted', style: { display: 'block' } }, 'Helps the live location stay fresh during a tour. Uses more battery.'))) : null;
+      const actions = [];
+      if (st === 'ON' || st === 'LOCATING') {
+        actions.push(h('button', { class: 'btn btn-primary btn-sm', type: 'button', disabled: busy, onclick: async () => {
+          busy = true; paint();
+          try { await T.sendNow(); UI.toast('Sent. The admin can see your position now.', 'success'); } catch (e) { UI.toast((e && e.message) || 'Could not send your location.', 'error'); }
+          busy = false; paint();
+        } }, UI.icon('pin', 15), busy ? 'Sending…' : 'Send my location now'));
+        actions.push(h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: () => T.openChip() }, 'Details / turn off'));
+      } else if (st === 'BLOCKED') actions.push(h('button', { class: 'btn btn-primary btn-sm', type: 'button', onclick: () => T.openChip() }, 'How to fix'));
+      else if (st === 'OFF' || st === 'ASK') actions.push(h('button', { class: 'btn btn-primary btn-sm', type: 'button', onclick: () => T.openChip() }, UI.icon('pin', 15), 'Turn on'));
+      UI.mount(body,
+        h('div', { class: 'row sb', style: { flexWrap: 'nowrap', gap: '10px' } }, h('div', null, UI.badge(label, tone), h('div', { class: 'muted', style: { fontSize: '12.5px', marginTop: '6px' } }, help)), h('div', { class: 'row', style: { gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end' } }, actions)),
+        h('dl', { class: 'kv' }, row('Phone permission', permText, d.perm === 'denied' ? 'neg' : ''), row('Last sent to the company', lastText), failing ? row('Problem', d.err + ' — will retry', 'neg') : null),
+        keep,
+        h('p', { class: 'muted', style: { margin: 0, fontSize: '12px' } }, 'A web app can only share your location while it is open. If you switch to another app or lock the phone, the position stops updating until you come back.'));
+    }
+    T.onStateChange = () => { if (!dead) paint(); };
+    paint();
+    const iv = setInterval(() => { if (!dead) paint(); }, 20000);
+    return { el, dispose() { dead = true; clearInterval(iv); if (T.onStateChange) T.onStateChange = null; } };
+  }
+
   /* ================================================================= profile */
   RW.route('/profile', async function (root, p, app) {
     app.title('Profile');
@@ -306,7 +355,7 @@
       try {
         await RW.api.call('auth.changePassword', { currentPassword: cur.value, newPassword: nw.value });
         UI.toast('Password changed. Other devices were signed out.', 'success'); cur.value = nw.value = cf.value = ''; strength.dataset.s = '0';
-        await app.refreshMe(); if (forced) location.hash = '#/dashboard'; else RW.app.go('#/profile');
+        await app.refreshMe(); if (forced) { location.hash = '#/dashboard'; if (RW.tracker) RW.tracker.start(app); } else RW.app.go('#/profile');
       } catch (e) { UI.fieldError(fNew, UI.errMsg(e)); } finally { btn.disabled = false; btn.classList.remove('busy'); }
     }
     const row = (k, v) => [h('dt', null, k), h('dd', null, v || '—')];
@@ -316,11 +365,13 @@
     const installBtn = h('button', { class: 'btn btn-ghost', type: 'button', onclick: async () => { if (app.installEvent) { app.installEvent.prompt(); await app.installEvent.userChoice; app.installEvent = null; } else UI.modal({ title: 'Install on your phone', size: 'sm', body: h('div', { class: 'stack', style: { gap: '10px' } }, h('p', null, 'Open this page in Chrome on Android, tap the ⋮ menu, then choose ', h('b', null, 'Install app'), ' (or Add to Home screen). It opens full-screen like a normal app and keeps working offline.'), h('p', { class: 'muted' }, 'On iPhone: Safari → Share → Add to Home Screen.')), actions: [{ label: 'Got it', kind: 'primary' }] }); } }, UI.icon('install', 16), 'Install app');
 
     root.appendChild(V.pageHead('Profile', 'Your account, password and preferences.'));
-    root.appendChild(h('div', { class: 'grid g2' },
+    const locCard = forced ? null : locationCard(app);       // not while a new password must be chosen first
+    root.appendChild(h('div', { class: 'grid g2 m1' },     // one column on a phone (two columns squeezed the details into a letter-per-line strip)
       h('div', { class: 'stack' },
         forced ? h('div', { class: 'callout warn' }, UI.icon('lock', 16), h('span', null, h('b', null, 'Choose a new password to continue.'), ' You signed in with a temporary password.')) : null,
         h('div', { class: 'card' }, h('div', { class: 'card-b' }, h('div', { class: 'row', style: { gap: '14px', marginBottom: '16px', flexWrap: 'nowrap' } }, h('span', { class: 'avatar', style: { width: '56px', height: '56px', fontSize: '19px' } }, RW.initials(u.fullName)), h('div', null, h('b', { style: { fontSize: '17px' } }, u.fullName), h('div', { class: 'muted' }, UI.roleName(u.role) + (u.designation ? ' · ' + u.designation : '')))),
           h('dl', { class: 'kv' }, row('Username', u.username), row('Email', u.email), row('Mobile', u.mobile), row('Branch', app.branch && app.branch.name), row('Cash register', app.register && app.register.id), row('Joined', u.joiningDate ? RW.fmtDate(u.joiningDate) : ''), row('Last sign-in', u.lastLoginAt ? RW.fmtDateTime(u.lastLoginAt) : '')))),
+        locCard ? locCard.el : null,
         h('div', { class: 'card' }, h('div', { class: 'card-h' }, h('h3', null, 'Preferences')), h('div', { class: 'card-b stack', style: { gap: '16px' } },
           h('div', { class: 'row sb' }, h('div', null, h('b', null, 'Appearance'), h('div', { class: 'muted', style: { fontSize: '12.5px' } }, 'Vouchers always print on white paper')), themeSeg),
           h('div', { class: 'row sb' }, h('div', null, h('b', null, 'Install on your phone'), h('div', { class: 'muted', style: { fontSize: '12.5px' } }, 'Works offline, opens full-screen')), installBtn),
@@ -328,6 +379,6 @@
           h('div', null, h('button', { class: 'btn btn-ghost', type: 'button', style: { color: 'var(--bad)' }, onclick: () => app.logout() }, UI.icon('logout', 16), 'Sign out'))))),
       h('div', { class: 'card' }, h('div', { class: 'card-h' }, h('h3', null, 'Change password', h('small', null, 'You will stay signed in here; other devices are signed out'))),
         h('div', { class: 'card-b stack', style: { gap: '14px' } }, fCur, fNew, strength, sLabel, fCf, h('div', null, h('button', { class: 'btn btn-primary', type: 'button', onclick: (e) => change(e.currentTarget) }, UI.icon('key', 16), 'Update password'))))));
-    return {};
+    return { dispose() { if (locCard) locCard.dispose(); } };
   });
 })(typeof window !== 'undefined' ? window : globalThis);

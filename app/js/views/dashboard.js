@@ -25,6 +25,43 @@
     CH().bars(c.count.host, Object.assign({ labels: ch.voucherCount14.map((x) => x.label), fullLabels: ch.voucherCount14.map((x) => full(x.date)), series: [{ name: 'Vouchers', values: ch.voucherCount14.map((x) => x.count), slot: 1 }], height: 210, valueFormat: (v) => cnt(v), axisFormat: (v) => cnt(v), marginLeft: 36, ariaLabel: 'Number of vouchers per day', labelWidth: 42 }, a));
   }
 
+  /* Branch-wise books: every branch (Main first) as its own block with cash in / out / balance, and under it every user's own account.
+   * Nothing is added across branches except the company total line at the bottom. `o.onBranch(b)` makes a branch row clickable. */
+  function booksView(B, o) {
+    o = o || {};
+    const money = (n, cls) => h('b', { class: cls || '' }, RW.fmtINR(n));
+    const cell = (label, node, cls) => h('span', { class: 'bk-c num ' + (cls || ''), dataset: { l: label } }, node);
+    const row = (cls, first, vals, click) => {
+      const tr = h('div', { class: 'bk-row ' + cls + (click ? ' click' : ''), role: click ? 'button' : null, tabindex: click ? 0 : null, onclick: click || null, onkeydown: click ? (e) => { if (e.key === 'Enter') click(); } : null }, first);
+      vals.forEach((c) => tr.appendChild(c));
+      return tr;
+    };
+    const nums = (x, bold) => [
+      cell('Cash In', h(bold ? 'b' : 'span', { class: 'amt-in' }, RW.fmtINR(x.inPaise))),
+      cell('Cash Out', h(bold ? 'b' : 'span', { class: 'amt-out' }, RW.fmtINR(x.outPaise))),
+      cell('Net', h(bold ? 'b' : 'span', { class: x.netPaise < 0 ? 'neg' : '' }, RW.fmtINR(x.netPaise)), 'hide-m'),
+      cell('Balance', h('b', { class: x.balancePaise < 0 ? 'neg' : '' }, RW.fmtINR(x.balancePaise))),
+    ];
+    const list = h('div', { class: 'bk' }, h('div', { class: 'bk-head' }, h('span', null, 'Account'), h('span', { class: 'num' }, 'Cash In'), h('span', { class: 'num' }, 'Cash Out'), h('span', { class: 'num hide-m' }, 'Net'), h('span', { class: 'num' }, 'Balance')));
+    B.branches.forEach((b) => {
+      const slot = V.slotFor(b.id);
+      const label = h('span', { class: 'bk-n' }, h('b', null, h('i', { class: 'bk-dot', style: { background: 'var(--c' + slot + ')' } }), b.name),
+        h('span', { class: 'sub' }, [b.isMain ? 'MAIN BRANCH' : b.code + ' BRANCH', b.userCount + ' user' + (b.userCount === 1 ? '' : 's'), b.count + ' voucher' + (b.count === 1 ? '' : 's')].join(' · '),
+          b.status !== 'ACTIVE' ? UI.badge('DISABLED', 'gray') : null,
+          o.analytics ? h('a', { class: 'link bk-an', href: '#/branches/' + b.id, onclick: (e) => e.stopPropagation() }, 'Analytics →') : null));
+      list.appendChild(row('bk-branch', label, nums(b, true), o.onBranch ? () => o.onBranch(b) : null));
+      if (!b.users.length) list.appendChild(h('div', { class: 'bk-row bk-user bk-none' }, h('span', { class: 'muted' }, 'No users in this branch yet.')));
+      b.users.forEach((u) => {
+        const who = h('span', { class: 'bk-n bk-un' }, h('b', null, u.fullName), h('span', { class: 'sub' }, u.former ? u.designation : [u.registerId, UI.roleName(u.role)].filter(Boolean).join(' · '), u.status !== 'ACTIVE' && !u.former ? UI.userStatusBadge(u.status) : null));
+        list.appendChild(row('bk-user', who, nums(u, false), u.former ? null : () => (location.hash = '#/reports?tab=user&user=' + u.id)));
+      });
+    });
+    if (o.total !== false && B.branches.length > 1) {
+      list.appendChild(row('bk-total', h('span', { class: 'bk-n' }, h('b', null, 'Company total'), h('span', { class: 'sub' }, 'All branches together')), nums(B.total, true)));
+    }
+    return list;
+  }
+
   function recentCard(title, href) {
     const body = h('div');
     return { body, el: h('div', { class: 'card' }, h('div', { class: 'card-h' }, h('h3', null, title), h('a', { class: 'link', href, style: { fontSize: '12.5px' } }, 'View all →')), h('div', { class: 'card-b flush' }, body)) };
@@ -35,8 +72,16 @@
     const mgmt = app.mgmt;
     app.title('Dashboard');
     let range = 'month', first = true, dead = false;
-    root.appendChild(V.pageHead('Dashboard', greeting() + ', ' + app.user.fullName.split(' ')[0] + ' · ' + RW.fmtDate(app.today) + ' · ' + (mgmt && app.seesAll ? 'All branches' : app.branch.name),
-      app.canCreate ? [h('a', { class: 'btn btn-ghost', href: '#/vouchers/new?type=RECEIVED' }, UI.icon('wallet', 16), 'Cash Received'), h('a', { class: 'btn btn-accent', href: '#/vouchers/new' }, UI.icon('plus', 16), 'Create Voucher')] : null));
+    // The main admin / CEO look at ONE set of books at a time: Main by default, then each branch, or the whole company together.
+    const scopeKey = 'rw.dash.scope';
+    const lsGet = () => { try { return localStorage.getItem(scopeKey); } catch (e) { return null; } };
+    const lsSet = (v) => { try { localStorage.setItem(scopeKey, v); } catch (e) { /* private mode */ } };
+    let scope = app.seesAll ? lsGet() || 'main' : '';
+    const who = (d) => (mgmt && app.seesAll ? (d && d.scope && d.scope.branchId ? d.scope.name + (d.scope.isMain ? ' (Main branch)' : '') : 'All branches together') : app.branch.name);
+    const head = V.pageHead('Dashboard', greeting() + ', ' + app.user.fullName.split(' ')[0] + ' · ' + RW.fmtDate(app.today) + ' · ' + (mgmt && app.seesAll ? 'Main branch' : app.branch.name),
+      app.canCreate ? [h('a', { class: 'btn btn-ghost', href: '#/vouchers/new?type=RECEIVED' }, UI.icon('wallet', 16), 'Cash Received'), h('a', { class: 'btn btn-accent', href: '#/vouchers/new' }, UI.icon('plus', 16), 'Create Voucher')] : null);
+    root.appendChild(head);
+    const subEl = head.querySelector('p');
     const body = h('div', { class: 'stack' }, V.loading(5));
     root.appendChild(body);
 
@@ -83,7 +128,7 @@
     // ----- persistent pieces (built once, updated on live refresh)
     const charts = chartCards();
     const recent = recentCard(mgmt ? 'Recent vouchers' : 'My recent vouchers', mgmt ? '#/all-vouchers' : '#/vouchers');
-    let K = null, branchesHost = null, donutCard = null, rangeChips = null, periodsHost = null;
+    let K = null, booksHost = null, donutCard = null, rangeChips = null, periodsHost = null;
 
     function build(d) {
       UI.clear(body);
@@ -99,6 +144,7 @@
         periodsHost = h('div', { class: 'grid g3 m1' });
         body.appendChild(periodsHost);
       } else {
+        const scoped = !!(d.scope && d.scope.branchId);
         rangeChips = V.presetChips([{ value: 'today', label: 'Today' }, { value: 'week', label: 'This Week' }, { value: 'month', label: 'This Month' }, { value: 'year', label: 'This Year' }, { value: 'all', label: 'All Time' }], range, (v) => { range = v; load(false); });
         K = {
           in: V.kpi({ label: 'Total Cash Inflow', icon: 'inflow', tone: 'in', money: true, sub: '', slot: 1 }),
@@ -108,18 +154,24 @@
           os: V.kpi({ label: 'Total Outstanding', icon: 'clock', tone: 'accent', money: true, sub: 'Receivable + payable' }),
           cnt: V.kpi({ label: 'Total Vouchers', icon: 'file', sub: '' }),
           users: V.kpi({ label: 'Active Users', icon: 'users', sub: 'Can sign in today' }),
-          br: V.kpi({ label: 'Active Branches', icon: 'building', sub: 'Isolated data per branch' }),
+          br: scoped ? null : V.kpi({ label: 'Active Branches', icon: 'building', sub: 'Isolated data per branch' }),
         };
-        body.appendChild(h('div', { class: 'row sb' }, h('b', { style: { fontSize: '15px' } }, 'Overview'), rangeChips.el));
+        if (app.seesAll && d.branches.length > 1) {
+          const opts = d.branches.map((b) => ({ value: b.id, label: chipName(b) })).concat([{ value: 'all', label: 'All together' }]);
+          const sc = V.presetChips(opts, d.scope.branchId || 'all', (v) => setScope(v));
+          body.appendChild(h('div', { class: 'scope-bar' }, h('span', { class: 'scope-l' }, UI.icon('building', 15), 'Books of'), sc.el));
+        }
+        body.appendChild(h('div', { class: 'row sb' }, h('b', { style: { fontSize: '15px' } }, scoped ? (d.scope.isMain ? 'Main branch — ' : '') + d.scope.name : app.seesAll ? 'Company overview' : 'Overview'), rangeChips.el));
         body.appendChild(h('div', { class: 'grid g-auto' }, K.bal, K.in, K.out, K.net, app.isAdmin ? K.os : null, K.cnt, K.users, K.br));
-        branchesHost = h('div', { class: 'grid g3 m1' });
-        body.appendChild(h('div', { class: 'row sb', style: { marginTop: '6px' } }, h('b', { style: { fontSize: '15px' } }, app.seesAll ? 'Branch monitoring' : 'Your branch'), app.seesAll ? h('span', { class: 'muted', style: { fontSize: '12.5px' } }, 'Click a branch for full analytics') : null));
-        body.appendChild(branchesHost);
+        booksHost = h('div', { class: 'card bk-card' });
+        body.appendChild(booksHost);
       }
       body.appendChild(h('div', { class: 'grid g-main' }, charts.daily.el, charts.balance.el));
-      body.appendChild(h('div', { class: 'grid g3' }, charts.weekly.el, charts.monthly.el, charts.count.el));
-      if (mgmt) { donutCard = h('div', { class: 'card' }); body.appendChild(h('div', { class: 'grid g-main' }, recent.el, donutCard)); } else body.appendChild(recent.el);
+      body.appendChild(h('div', { class: 'grid g3 m1' }, charts.weekly.el, charts.monthly.el, charts.count.el));
+      if (mgmt && !(d.scope && d.scope.branchId) && d.branches.length > 1) { donutCard = h('div', { class: 'card' }); body.appendChild(h('div', { class: 'grid g-main' }, recent.el, donutCard)); } else { donutCard = null; body.appendChild(recent.el); }
     }
+    const chipName = (b) => { const n = V.branchShort(b); return b.isMain && n.toLowerCase() !== 'main' ? n + ' (Main)' : n; };
+    function setScope(v) { scope = v; lsSet(v); first = true; load(false); }
 
     function fill(d, animate) {
       const day = d.charts.daily14, tdy = day[day.length - 1], yst = day[day.length - 2] || { inPaise: 0, outPaise: 0, count: 0 };
@@ -136,19 +188,17 @@
             h('div', { class: 'bc-grid', style: { marginTop: '12px' } }, h('div', { class: 'in' }, h('small', null, 'Cash In'), h('b', null, RW.fmtINR(x.inPaise))), h('div', { class: 'out' }, h('small', null, 'Cash Out'), h('b', null, RW.fmtINR(x.outPaise))), h('div', { style: { gridColumn: '1 / -1' } }, h('small', null, 'Net cash'), h('b', { class: x.netPaise < 0 ? 'neg' : '' }, RW.fmtINR(x.netPaise)))));
         }));
       } else {
-        const k = d.kpis;
+        const k = d.kpis, scoped = !!(d.scope && d.scope.branchId), nm = scoped ? d.scope.name : '';
         K.in.set(k.inPaise, d.kpiRange.label, ser((x) => x.inPaise)); K.out.set(k.outPaise, d.kpiRange.label, ser((x) => x.outPaise)); K.net.set(k.netPaise, d.kpiRange.label);
-        K.bal.set(k.balancePaise, 'Across all registers', d.charts.balanceTrend30.map((x) => x.balancePaise)); if (app.isAdmin) K.os.set(k.outstandingPaise || 0, 'Receivable + payable');
-        K.cnt.set(k.count, d.kpiRange.label); K.users.set(k.activeUsers); K.br.set(k.activeBranches);
-        UI.mount(branchesHost, d.branches.map((b, i) => {
-          const slot = V.slotFor(b.id);
-          const card = h(app.seesAll ? 'button' : 'div', { class: 'card branch-card', type: 'button', onclick: app.seesAll ? () => (location.hash = '#/branches/' + b.id) : null },
-            h('div', { class: 'bc-h' }, h('b', null, h('i', { style: { background: 'var(--c' + slot + ')' } }), b.code + ' BRANCH'), b.status === 'ACTIVE' ? UI.badge('ACTIVE', 'green') : UI.badge('DISABLED', 'gray')),
-            h('h4', null, b.name),
-            h('div', { class: 'bc-grid' }, h('div', { class: 'in' }, h('small', null, 'Cash In'), h('b', null, RW.fmtINR(b.inPaise))), h('div', { class: 'out' }, h('small', null, 'Cash Out'), h('b', null, RW.fmtINR(b.outPaise))), h('div', null, h('small', null, 'Balance'), h('b', { class: b.balancePaise < 0 ? 'neg' : '' }, RW.fmtINR(b.balancePaise))), h('div', null, h('small', null, 'Vouchers · Users'), h('b', null, b.count + ' · ' + b.userCount))));
-          return card;
-        }));
-        branchDonut(d);
+        K.bal.set(k.balancePaise, scoped ? 'Registers of ' + nm : 'Across all registers', d.charts.balanceTrend30.map((x) => x.balancePaise)); if (app.isAdmin) K.os.set(k.outstandingPaise || 0, scoped ? 'Receivable + payable · this branch' : 'Receivable + payable');
+        K.cnt.set(k.count, d.kpiRange.label); K.users.set(k.activeUsers, scoped ? 'In this branch' : 'Can sign in today'); if (K.br) K.br.set(k.activeBranches);
+        UI.mount(booksHost,
+          h('div', { class: 'card-h' }, h('div', null, h('h3', null, scoped ? 'Accounts of ' + nm : app.seesAll ? 'Branch-wise accounts' : 'Accounts of your branch'),
+            h('small', null, scoped ? d.kpiRange.label + ' · only this branch’s cash — other branches are not mixed in' : d.kpiRange.label + ' · every branch and every user kept separate, company total at the bottom')),
+            app.seesAll && scoped ? h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: () => setScope('all') }, 'See all branches') : null),
+          h('div', { class: 'card-b flush' }, booksView(d.books, { analytics: app.seesAll, onBranch: app.seesAll && !scoped ? (b) => setScope(b.id) : null })));
+        if (subEl) subEl.textContent = greeting() + ', ' + app.user.fullName.split(' ')[0] + ' · ' + RW.fmtDate(app.today) + ' · ' + who(d);
+        if (donutCard) branchDonut(d);
       }
       drawCharts(charts, d, animate);
       UI.mount(recent.body, d.recent.length ? V.voucherTable(d.recent, { showUser: mgmt, showBranch: mgmt && app.seesAll, compact: mgmt }) : UI.empty('No vouchers yet', app.canCreate ? 'Create your first voucher to see it here.' : 'Vouchers will appear here once created.', 'file'));
@@ -170,7 +220,7 @@
     async function load(initial) {
       try {
         if (!initial) body.classList.add('loading-dim');
-        const d = await RW.api.call('dashboard.get', { range });
+        const d = await RW.api.call('dashboard.get', { range, branchId: app.seesAll ? scope : undefined });
         if (dead) return;
         if (first) { build(d); }
         fill(d, first);

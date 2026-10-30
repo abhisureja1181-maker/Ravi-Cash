@@ -2,7 +2,7 @@
  * Strategy: navigations and config.js are network-first with a cached fallback; static assets are stale-while-revalidate.
  * Business data never goes through here: the demo keeps it in IndexedDB and the real server's /api/* calls
  * (including the live-sync stream) are never intercepted or cached. */
-const VERSION = 'rw-shell-v6';
+const VERSION = 'rw-shell-v7';
 const SHELL = [
   './', 'index.html', 'config.js', 'manifest.webmanifest',
   'css/app.css', 'css/login.css', 'vendor/leaflet/leaflet.css', 'vendor/leaflet/leaflet.js',

@@ -660,3 +660,44 @@ td .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; ma
   .lm-grid { grid-template-columns: 1fr; }
   .lm-mapwrap { height: 56vh; min-height: 340px; position: relative; top: auto; }
 }
+
+/* ===== Branch-wise books (dashboard) ===== */
+.scope-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+.scope-l { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 650; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); }
+.bk-card { overflow: hidden; }
+.bk { display: block; }
+.bk-head, .bk-row { display: grid; grid-template-columns: minmax(0, 1.8fr) repeat(4, minmax(0, 1fr)); gap: 6px 14px; align-items: center; padding: 10px 18px; }
+.bk-head { font-size: 11px; letter-spacing: .07em; text-transform: uppercase; font-weight: 650; color: var(--ink-3); background: var(--surface-2); border-bottom: 1px solid var(--line); }
+.bk-row { border-top: 1px solid var(--line); font-size: 13px; }
+.bk-row.click { cursor: pointer; }
+.bk-row.click:hover, .bk-row.click:focus-visible { background: var(--surface-2); outline: none; }
+.bk-branch { background: var(--surface-2); border-top: 2px solid var(--line-2); padding-top: 13px; padding-bottom: 13px; }
+.bk-branch:first-of-type { border-top: 0; }
+.bk-n { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.bk-n b { display: flex; align-items: center; gap: 8px; overflow-wrap: anywhere; }
+.bk-dot { width: 10px; height: 10px; border-radius: 50%; flex: 0 0 10px; }
+.bk-n .sub { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; color: var(--ink-3); font-size: 11.5px; font-weight: 400; }
+.bk-an { font-size: 11.5px; font-weight: 600; }
+.bk-user .bk-un { padding-left: 18px; }
+.bk-user .bk-un b { font-weight: 600; }
+.bk-none { color: var(--ink-3); padding-left: 36px; }
+.bk-total { background: var(--surface-2); border-top: 2px solid var(--line-2); font-weight: 700; }
+.bk-c b, .bk-c span { font-variant-numeric: tabular-nums; }
+.bk-c .neg, .bk .neg { color: var(--bad); }
+@media (max-width: 720px) {
+  .bk-head { display: none; }
+  .bk-row { grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 11px 14px; row-gap: 8px; }
+  .bk-row > .bk-n { grid-column: 1 / -1; }
+  .bk-row > .bk-c { text-align: left; display: flex; flex-direction: column; gap: 1px; }
+  .bk-row > .bk-c::before { content: attr(data-l); font-size: 10.5px; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+  .bk-row > .bk-c.hide-m { display: none; }
+  .bk-user .bk-un { padding-left: 14px; }
+  .bk-none { padding-left: 14px; }
+}
+.form-sec { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--line); margin-top: 4px; }
+.form-sec > svg { flex: 0 0 auto; margin-top: 2px; color: var(--primary); }
+.form-sec b { display: block; font-size: 13.5px; }
+.form-sec small { display: block; color: var(--ink-3); font-size: 12px; margin-top: 2px; line-height: 1.4; }
+/* six shortcuts on a phone (Home, Vouchers, Tours, Cash, Statement, Profile) */
+@media (max-width: 720px) { .bnav.n6 a, .bnav.n6 button { font-size: 9.8px; letter-spacing: -.1px; gap: 2px; } .bnav.n6 svg { width: 20px; height: 20px; } }
+@media (max-width: 760px) { .kv { grid-template-columns: 112px minmax(0, 1fr); gap: 8px 12px; } .kv dd { overflow-wrap: anywhere; word-break: normal; } }
