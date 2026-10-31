@@ -145,6 +145,13 @@
       }
     });
 
+    /* A restored backup brings its own locations and day-wise routes back: `map` = { loc: {...}, 'trail:YYYY-MM-DD': {...} }. */
+    H.replaceLocations = (map) => serial(async () => {
+      try { await H.storage.del('loc'); } catch (e) { /* none */ }
+      for (const k of await H.storage.keys('trail:')) { try { await H.storage.del(k); } catch (e) { /* gone */ } }
+      for (const k of Object.keys(map)) await H.storage.set(k, map[k]);
+    });
+
     /* ------------------------------------------------------ admin / CEO views */
     function activityOf(s, u, today, vToday) {
       const tour = s.tours.find((t) => t.userId === u.id && t.status === 'PLANNED' && t.startDate <= today && today <= t.endDate) || null;

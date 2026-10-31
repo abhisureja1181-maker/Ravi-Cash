@@ -52,6 +52,7 @@
     { id: 'attachments', label: 'Attachments', icon: 'clip', href: '#/attachments' },
     { id: 'audit', label: 'Audit', icon: 'shield', href: '#/audit' },
     { id: 'notifications', label: 'Notifications', icon: 'bell', href: '#/notifications', badge: true },
+    { id: 'backup', label: 'Backup', icon: 'cloudup', href: '#/backup', need: 'super' },
     { id: 'settings', label: 'Settings', icon: 'settings', href: '#/settings', need: 'super' },
   ];
   const NAV_CEO = [

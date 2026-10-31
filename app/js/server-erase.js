@@ -65,6 +65,13 @@
       return { vouchers: dv.vouchers, blobs: dv.blobs.concat(dt.blobs), statements: stBefore - s.statements.length, tours: dt.tours.length, visits: dt.visits.length };
     }
 
+    /* A server with real storage keeps a copy of everything (database AND receipt photos) before anything is erased for good,
+     * so a mistaken delete can be put back from Backup → "Copies kept by the server". If the copy cannot be saved, nothing is deleted. */
+    const safetyCopy = async () => {
+      if (!H.beforeErase) return;
+      try { await H.beforeErase(); } catch (e) { throw new ApiError('VALIDATION', 'A safety copy could not be saved, so nothing was deleted (' + (e && e.message ? e.message : e) + ').'); }
+    };
+
     const dropBlobs = async (ctx, ids) => { for (const id of ids) { try { await ctx.storage.del('att:' + id); } catch (e) { /* an orphan file is harmless */ } } };
 
     function counts(s) {
@@ -127,6 +134,7 @@
       const reason = cleanText(p.reason, 5, 500, 'Reason for deleting');
       const want = new Set(ids.map(String));
       if (s.vouchers.filter((v) => want.has(v.id)).length !== want.size) throw new ApiError('NOT_FOUND', 'Some of these vouchers no longer exist. Refresh the page and try again.');
+      await safetyCopy();
       const { vouchers, blobs } = dropVouchers(s, (v) => want.has(v.id));
       if (byFilter && vouchers.length > MAX_BATCH) {
         // too many for one audit entry each: keep one entry that says exactly what was erased
@@ -151,6 +159,7 @@
       const o = s.outstanding.find((x) => x.id === p.id);
       if (!o || !(isSuper(ctx.user) || o.branchId === ctx.user.branchId)) throw new ApiError('NOT_FOUND', 'Outstanding entry not found');
       const reason = cleanText(p.reason, 5, 500, 'Reason for deleting');
+      await safetyCopy();
       s.outstanding = s.outstanding.filter((x) => x !== o);
       await audit(ctx, { entity: 'OUTSTANDING', entityId: o.id, entityLabel: o.partyName, action: 'DELETE', branchId: o.branchId,
         old: { party: o.partyName, direction: o.direction, amount: o.amountPaise / 100, settled: o.settledPaise / 100, due: o.dueDate, status: o.status, reference: o.reference || '' }, new: null, reason });
@@ -168,6 +177,7 @@
       }
       const reason = cleanText(p.reason, 5, 500, 'Reason for deleting');
       const label = t.fullName + ' (' + t.username + ')', branchId = t.branchId, b = branchById(s, branchId);
+      await safetyCopy();
       const r = dropUsers(s, new Set([t.id]));
       await audit(ctx, { entity: 'USER', entityId: t.id, entityLabel: label, action: 'PURGE', branchId,
         old: { name: t.fullName, username: t.username, role: t.role, branch: b ? b.name : '', vouchersErased: r.vouchers.length, statementsErased: r.statements }, new: null, reason });
@@ -201,6 +211,7 @@
         }
         return { ok: true, removed: { users: targets.length, vouchers: 0, statements: 0 } };
       }
+      await safetyCopy();
       const info = targets.map((t) => ({ t, label: t.fullName + ' (' + t.username + ')', b: branchById(s, t.branchId), n: s.vouchers.filter((v) => v.userId === t.id).length, st: s.statements.filter((x) => x.userId === t.id).length }));
       const r = dropUsers(s, set);
       for (const i of info) {
@@ -225,6 +236,7 @@
       const reason = cleanText(p.reason, 5, 500, 'Reason for deleting');
       const c = branchCounts(s, b);
       const uids = branchUserIds(s, b);
+      await safetyCopy();
       const r = dropUsers(s, uids);
       const dv = dropVouchers(s, (v) => v.branchId === b.id);          // vouchers of this branch written by users who since moved away
       const dt = dropTours(s, (x) => x.branchId === b.id);             // tours and meetings of this branch

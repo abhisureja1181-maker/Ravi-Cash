@@ -708,6 +708,7 @@
       out.branches = brs.map((b) => branchStats(s, b, range.from, range.to));
       out.scope = scopeId ? { branchId: scopeId, name: branchById(s, scopeId).name, isMain: isMainBranch(s, branchById(s, scopeId)) } : { branchId: '' };
       out.books = booksFor(s, u, range.from, range.to > today ? today : range.to, scopeId);
+      if (isSuper(u) && H.backupStatus) out.backup = H.backupStatus(s);       // the "take a backup" reminder
       return out;
     });
 

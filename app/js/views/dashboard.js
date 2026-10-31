@@ -85,6 +85,23 @@
     const body = h('div', { class: 'stack' }, V.loading(5));
     root.appendChild(body);
 
+    /* ----- backup reminder (main admin only): shown while the last backup is older than the chosen number of days */
+    const backupHost = h('div', { class: 'backup-host' });
+    root.insertBefore(backupHost, body);
+    function paintBackup(b) {
+      UI.clear(backupHost);
+      if (!b || !b.due) return;
+      const when = b.lastAt ? 'The last backup was ' + (b.ageDays === 0 ? 'today' : b.ageDays + ' day' + (b.ageDays === 1 ? '' : 's') + ' ago') + ' (' + RW.fmtDateTime(b.lastAt) + ').' : 'No backup has been taken yet.';
+      const btn = h('button', { class: 'btn btn-primary btn-sm', type: 'button' }, UI.icon('download', 15), 'Download backup now');
+      btn.addEventListener('click', async () => {
+        btn.disabled = true; btn.classList.add('busy');
+        try { const r = await RW.v.downloadBackup({ photos: true }); RW.v.backupSavedToast(r); } catch (e) { UI.toast(UI.errMsg(e), 'error'); } finally { btn.disabled = false; btn.classList.remove('busy'); }
+      });
+      backupHost.appendChild(h('div', { class: 'callout warn bkp-remind' }, UI.icon('cloudup', 18),
+        h('div', { style: { flex: 1, minWidth: 0 } }, h('b', null, 'Time to take a backup'), h('div', null, when + ' One file keeps your data safe if anything is erased by mistake.')),
+        h('div', { class: 'row', style: { gap: '8px', flex: 'none' } }, btn, h('a', { class: 'btn btn-ghost btn-sm', href: '#/backup' }, 'Backup page'))));
+    }
+
     /* ----- my tour: shown only while a tour is running or about to start */
     const tourHost = h('div', { class: 'tour-host' });
     root.insertBefore(tourHost, body);
@@ -225,6 +242,7 @@
         if (first) { build(d); }
         fill(d, first);
         first = false;
+        paintBackup(d.backup);
         body.classList.remove('loading-dim');
       } catch (e) { if (!dead) { body.classList.remove('loading-dim'); if (first) UI.mount(body, V.errorCard(e, () => load(true))); else UI.toast(UI.errMsg(e), 'error'); } }
     }

@@ -54,7 +54,7 @@ test('service worker: pre-caches only existing files, never caches API calls, sc
   assert.match(sw, /startsWith\('\/api\/'\)/, 'API traffic must bypass the cache');
   const order = (a, b) => assert.ok(scripts.indexOf(a) < scripts.indexOf(b), a + ' must load before ' + b);
   order('js/util.js', 'js/store.js'); order('js/store.js', 'js/server-core.js'); order('js/server-core.js', 'js/server-vouchers.js');
-  order('js/server-vouchers.js', 'js/server-tours.js'); order('js/server-tours.js', 'js/server-location.js'); order('js/server-location.js', 'js/seed.js'); order('js/views/common.js', 'js/views/tours.js'); order('js/views/tours.js', 'js/views/livemap.js'); order('js/views/livemap.js', 'js/app.js'); order('vendor/leaflet/leaflet.js', 'js/map.js'); order('js/map.js', 'js/tracker.js'); order('js/ui.js', 'js/tracker.js'); order('js/tracker.js', 'js/app.js');
+  order('js/server-vouchers.js', 'js/server-tours.js'); order('js/server-tours.js', 'js/server-location.js'); order('js/server-location.js', 'js/server-backup.js'); order('js/server-backup.js', 'js/seed.js'); order('js/views/common.js', 'js/views/tours.js'); order('js/views/tours.js', 'js/views/livemap.js'); order('js/views/livemap.js', 'js/app.js'); order('vendor/leaflet/leaflet.js', 'js/map.js'); order('js/map.js', 'js/tracker.js'); order('js/ui.js', 'js/tracker.js'); order('js/tracker.js', 'js/app.js');
   order('js/api.js', 'js/ui.js'); order('js/ui.js', 'js/views/common.js'); order('js/views/common.js', 'js/views/login.js'); order('js/views/misc.js', 'js/app.js');
 });
 

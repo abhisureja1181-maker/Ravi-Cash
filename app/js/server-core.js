@@ -279,6 +279,9 @@
       pubUser, vView, counted, reviewOf, vlabel, audit, notify, checkPassword, makeCredentials, netFor, registerOf, currentBalance, authenticate,
       setupKey: String(opts.setupKey || '').trim(),   // optional: first-time setup on a public server needs this key
       beforeWipe: opts.beforeWipe || null,   // optional: a server with real storage makes a safety backup before "clear all data"
+      beforeErase: opts.beforeErase || null,      // optional: ... and a (cheap, throttled) copy before any permanent delete of vouchers, users or branches
+      beforeRestore: opts.beforeRestore || null,  // optional: ... and a full copy of what is there before a backup is restored over it
+      maxBackupMb: opts.maxBackupMb || 0,         // the largest backup file this server accepts (0 = no limit, e.g. the browser demo)
     };
 
     /* ------------------------------------------------------------ auth methods */

@@ -7,7 +7,8 @@
  *    A power cut or crash therefore leaves either the old or the new file, never a torn one.
  *  - Receipt photos are stored as separate files (`kv/att__<id>.json`) so the ledger stays small.
  *  - Rolling backups: at most one per hour is copied to `backups/`, the newest 96 are kept, plus one
- *    per day for 90 days.
+ *    per day for 90 days. Full copies (database + photos, hard-linked so they cost no space): one a day for 14 days,
+ *    one before permanent deletes, one before "clear all data" and before a restore.
  *  - A lock file stops two server processes from writing the same data directory.
  */
 const fs = require('node:fs');
@@ -97,17 +98,95 @@ class FileStorage {
     for (const f of files) if (!keep.has(f)) { try { fs.unlinkSync(path.join(dir, f)); } catch (e) { /* ignore */ } }
   }
 
-  // A complete copy (database + receipt photos) for "clear all data". Lives in backups/<label>-<time>/ and is never
-  // removed by the rolling-backup cleanup. Returns the folder path relative to the data directory.
-  async snapshot(label) {
+  /* A complete copy (database + receipt photos) in backups/<label>-<time>/ . The files are hard-linked, not copied: they cost no
+   * extra disk space, and they stay intact when the original is later erased, because every write here replaces a file
+   * (temp file + rename) instead of changing it in place. Where links are not possible the files are copied.
+   * `keep`: how many copies with this label to keep (the oldest are removed); default: all, forever.
+   * Returns the folder path relative to the data directory. */
+  _stamp(ms) { return new Date(ms || Date.now()).toISOString().replace(/[-:]/g, '').replace(/\..*/, '').replace('T', '-'); }
+  _link(src, dst) {
+    try { fs.rmSync(dst, { force: true }); fs.linkSync(src, dst); } catch (e) { fs.copyFileSync(src, dst); }
+  }
+  async snapshot(label, opts) {
     await this.chain;                                  // let any write in flight finish first
-    const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\..*/, '').replace('T', '-');
-    const rel = path.join('backups', String(label || 'snapshot').replace(/[^a-z0-9-]/gi, '') + '-' + stamp);
+    label = String(label || 'snapshot').replace(/[^a-z0-9-]/gi, '');
+    const rel = path.join('backups', label + '-' + this._stamp());
     const dir = path.join(this.dir, rel);
-    fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
-    if (fs.existsSync(this.dbFile)) fs.copyFileSync(this.dbFile, path.join(dir, 'db.json'));
-    fs.cpSync(path.join(this.dir, 'kv'), path.join(dir, 'kv'), { recursive: true });
+    fs.mkdirSync(path.join(dir, 'kv'), { recursive: true, mode: 0o700 });
+    if (fs.existsSync(this.dbFile)) this._link(this.dbFile, path.join(dir, 'db.json'));
+    const kv = path.join(this.dir, 'kv');
+    for (const f of fs.readdirSync(kv)) if (f.endsWith('.json')) this._link(path.join(kv, f), path.join(dir, 'kv', f));
+    if (opts && opts.keep > 0) this._prune(label, opts.keep);
     return rel.split(path.sep).join('/');
+  }
+  _snapshotDirs(label) {
+    const re = new RegExp('^' + label + '-(\\d{8})-(\\d{6})$');
+    try { return fs.readdirSync(path.join(this.dir, 'backups'), { withFileTypes: true }).filter((e) => e.isDirectory() && re.test(e.name)).map((e) => e.name).sort(); } catch (e) { return []; }
+  }
+  _prune(label, keep) {
+    const all = this._snapshotDirs(label);
+    for (const n of all.slice(0, Math.max(0, all.length - keep))) { try { fs.rmSync(path.join(this.dir, 'backups', n), { recursive: true, force: true }); } catch (e) { /* ignore */ } }
+  }
+  _lastSnapshotAt(label) {
+    const n = this._snapshotDirs(label).pop();
+    if (!n) return 0;
+    const m = /-(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})$/.exec(n);
+    return Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]);
+  }
+  // Before a permanent delete: a full copy, but not again within `minGapMs` of the previous one (deleting 40 vouchers one by one
+  // must not make 40 copies); the earlier copy still holds everything that existed before this session of deleting.
+  async safetyCopy(label, o) {
+    o = o || {};
+    if (!fs.existsSync(this.dbFile)) return null;
+    if (o.minGapMs && Date.now() - this._lastSnapshotAt(label) < o.minGapMs) return null;
+    return this.snapshot(label, { keep: o.keep || 30 });
+  }
+  // One full copy a day (taken by a timer in server/index.js), the newest `keep` days are kept.
+  async autoSnapshot(o) {
+    o = o || {};
+    if (!fs.existsSync(this.dbFile)) return null;
+    if (Date.now() - this._lastSnapshotAt('daily') < (o.everyMs || 20 * 3600000)) return null;
+    return this.snapshot('daily', { keep: o.keep || 14 });
+  }
+
+  /* What is in backups/, newest first: [{ id, kind, at (ISO), bytes, full, photos }]
+   *   kind 'auto'          the hourly rolling copy of the database (no photos)
+   *   kind 'daily' / 'before-erase' / 'before-clear' / 'before-restore'   a full copy (database + photos) */
+  async listBackups() {
+    const dir = path.join(this.dir, 'backups');
+    const iso = (d, t) => d.slice(0, 4) + '-' + d.slice(4, 6) + '-' + d.slice(6, 8) + 'T' + t.slice(0, 2) + ':' + t.slice(2, 4) + ':' + t.slice(4, 6) + '.000Z';
+    const out = [];
+    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+      let m;
+      try {
+        if (e.isFile() && (m = /^db-(\d{8})-(\d{6})\.json$/.exec(e.name))) out.push({ id: e.name.slice(0, -5), kind: 'auto', at: iso(m[1], m[2]), bytes: fs.statSync(path.join(dir, e.name)).size, full: false, photos: 0 });
+        else if (e.isDirectory() && (m = /^([A-Za-z0-9]+(?:-[A-Za-z0-9]+)*)-(\d{8})-(\d{6})$/.exec(e.name)) && fs.existsSync(path.join(dir, e.name, 'db.json'))) {
+          const kv = path.join(dir, e.name, 'kv');
+          out.push({ id: e.name, kind: m[1], at: iso(m[2], m[3]), bytes: fs.statSync(path.join(dir, e.name, 'db.json')).size, full: true,
+            photos: fs.existsSync(kv) ? fs.readdirSync(kv).filter((f) => f.startsWith('att__')).length : 0 });
+        }
+      } catch (err) { /* vanished while listing */ }
+    }
+    return out.sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0));
+  }
+
+  /* One of the copies above: { db, kv, full } — kv maps 'att:<id>' / 'loc' / 'trail:<day>' to its stored value. */
+  async readBackup(id) {
+    if (!/^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*-\d{8}-\d{6}$/.test(String(id))) throw new Error('Bad backup id');
+    const dir = path.join(this.dir, 'backups');
+    const file = path.join(dir, id + '.json'), folder = path.join(dir, id);
+    if (id.startsWith('db-') && fs.existsSync(file)) return { db: JSON.parse(fs.readFileSync(file, 'utf8')), kv: {}, full: false };
+    if (fs.existsSync(path.join(folder, 'db.json'))) {
+      const kv = {};
+      const kvDir = path.join(folder, 'kv');
+      if (fs.existsSync(kvDir)) for (const f of fs.readdirSync(kvDir)) {
+        if (!f.endsWith('.json')) continue;
+        const key = f.slice(0, -5).replace(/__/g, ':');
+        if (key !== 'db' && KEY_RE.test(key)) kv[key] = JSON.parse(fs.readFileSync(path.join(kvDir, f), 'utf8'));
+      }
+      return { db: JSON.parse(fs.readFileSync(path.join(folder, 'db.json'), 'utf8')), kv, full: true };
+    }
+    throw new Error('Backup not found');
   }
 
   _queue(fn) { const run = this.chain.then(fn); this.chain = run.catch(() => {}); return run; }

@@ -27,7 +27,7 @@ const crypto = require('node:crypto');
 const { FileStorage } = require('./storage');
 
 const ROOT = path.join(__dirname, '..');
-for (const f of ['util', 'store', 'server-core', 'server-vouchers', 'server-admin', 'server-erase', 'server-tours', 'server-location', 'seed']) require(path.join(ROOT, 'app', 'js', f + '.js'));
+for (const f of ['util', 'store', 'server-core', 'server-vouchers', 'server-admin', 'server-erase', 'server-tours', 'server-location', 'server-backup', 'seed']) require(path.join(ROOT, 'app', 'js', f + '.js'));
 const RW = globalThis.RW;
 
 const env = process.env;
@@ -51,6 +51,7 @@ function pickStatic() {
 const STATIC_DIR = env.STATIC_DIR || pickStatic();
 const TRUST_PROXY = env.TRUST_PROXY === '1';
 const MAX_BODY = 16 * 1024 * 1024;
+const MAX_BACKUP_BODY = 100 * 1024 * 1024;   // only a signed-in Super Admin restoring a backup file may send more than MAX_BODY, up to this
 const ITER = parseInt(env.PBKDF2_ITERATIONS || '310000', 10);
 
 const STATUS = { UNAUTHENTICATED: 401, ACCOUNT_DISABLED: 403, FORBIDDEN: 403, NOT_FOUND: 404, VALIDATION: 422, CONFLICT: 409, LOCKED: 423, RATE_LIMIT: 429 };
@@ -62,7 +63,10 @@ function createApp(opts) {
   const bus = RW.makeBus('rw-server', { channel: false });
   // "Clear all data" first takes a full copy (database + receipt photos) into data/backups/before-clear-<time>/
   const beforeWipe = async () => (typeof storage.snapshot === 'function' ? storage.snapshot('before-clear') : null);
-  const server = RW.createServer({ storage, bus, hashIterations: opts.iterations || ITER, beforeWipe, setupKey: opts.setupKey !== undefined ? opts.setupKey : env.SETUP_KEY });
+  // Permanent deletes (vouchers, users, branches) and backup restores also keep a full copy of what is there first.
+  const beforeErase = async () => (typeof storage.safetyCopy === 'function' ? storage.safetyCopy('before-erase', { minGapMs: 5 * 60000, keep: 30 }) : null);
+  const beforeRestore = async () => (typeof storage.snapshot === 'function' ? storage.snapshot('before-restore', { keep: 20 }) : null);
+  const server = RW.createServer({ storage, bus, hashIterations: opts.iterations || ITER, beforeWipe, beforeErase, beforeRestore, maxBackupMb: Math.floor(MAX_BACKUP_BODY / 1048576), setupKey: opts.setupKey !== undefined ? opts.setupKey : env.SETUP_KEY });
   const staticDir = opts.staticDir || STATIC_DIR;
   const trustProxy = opts.trustProxy !== undefined ? opts.trustProxy : TRUST_PROXY;
   const log = opts.log || ((...a) => console.log(new Date().toISOString(), ...a));
@@ -143,10 +147,11 @@ function createApp(opts) {
     if (!o || req.headers.origin !== o) return extra;
     return Object.assign(extra || {}, { 'Access-Control-Allow-Origin': o, 'Access-Control-Allow-Headers': 'Authorization, Content-Type', 'Access-Control-Allow-Methods': 'POST, GET, OPTIONS', 'Access-Control-Max-Age': '600', Vary: 'Origin' });
   }
-  function readBody(req) {
+  function readBody(req, max) {
+    max = max || MAX_BODY;
     return new Promise((resolve, reject) => {
       const chunks = []; let n = 0;
-      req.on('data', (c) => { n += c.length; if (n > MAX_BODY) { reject(Object.assign(new Error('Request too large'), { status: 413 })); req.destroy(); } else chunks.push(c); });
+      req.on('data', (c) => { n += c.length; if (n > max) { reject(Object.assign(new Error('Request too large'), { status: 413 })); req.destroy(); } else chunks.push(c); });
       req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
       req.on('error', reject);
     });
@@ -175,7 +180,17 @@ function createApp(opts) {
   async function handleCall(req, res) {
     const ip = clientIp(req);
     let body;
-    try { body = JSON.parse(await readBody(req) || '{}'); } catch (e) { return json(res, e.status || 400, { ok: false, error: { code: 'VALIDATION', message: e.status === 413 ? 'The file is too large.' : 'Malformed request' } }, cors(req)); }
+    // A restore uploads the whole backup file. Such a big body is accepted only from a signed-in Super Admin (checked BEFORE it is read),
+    // and only for backup.restore; everybody else is limited to MAX_BODY.
+    let max = MAX_BODY;
+    if (parseInt(req.headers['content-length'] || '0', 10) > MAX_BODY) {
+      try { const me = await server.call(bearer(req), 'auth.me', {}); if (me && me.user && me.user.role === 'SUPER_ADMIN') max = MAX_BACKUP_BODY; } catch (e) { /* the normal limit applies */ }
+    }
+    try {
+      const raw = await readBody(req, max);
+      if (raw.length > MAX_BODY && !/^\s*\{\s*"method"\s*:\s*"backup\.restore"/.test(raw.slice(0, 80))) throw Object.assign(new Error('Request too large'), { status: 413 });
+      body = JSON.parse(raw || '{}');
+    } catch (e) { return json(res, e.status || 400, { ok: false, error: { code: 'VALIDATION', message: e.status === 413 ? 'The file is too large.' : 'Malformed request' } }, cors(req)); }
     const method = body && typeof body.method === 'string' ? body.method : '';
     if (!/^[A-Za-z]+\.[A-Za-z]+$/.test(method)) return json(res, 400, { ok: false, error: { code: 'VALIDATION', message: 'Unknown method' } }, cors(req));
     if ((method === 'auth.login' || method === 'system.setup') && throttled(ip, 40, 10 * 60000)) {
@@ -234,18 +249,27 @@ function createApp(opts) {
   };
 
   const httpServer = http.createServer(handler);
-  httpServer.requestTimeout = 120000;
+  httpServer.requestTimeout = 300000;               // a big backup file from a slow connection needs time
   httpServer.headersTimeout = 20000;
   httpServer.keepAliveTimeout = 65000;
+
+  /* One full copy of the data a day (hard-linked: no extra disk space), kept for 14 days. Checked at start and then every hour. */
+  const autoEveryMs = opts.autoSnapshotMs === undefined ? 3600000 : opts.autoSnapshotMs;      // 0 = off
+  let autoTimer = null, autoFirst = null;
+  const autoTick = () => {
+    if (typeof storage.autoSnapshot !== 'function') return;
+    storage.autoSnapshot().then((r) => { if (r) log('Daily backup copy saved:', r); }).catch((e) => log('Daily backup copy failed:', e && e.message || e));
+  };
 
   return {
     server, storage, bus, httpServer, handler,
     async listen(port, host) {
       await new Promise((resolve, reject) => { httpServer.once('error', reject); httpServer.listen(port, host, resolve); });
+      if (autoEveryMs) { autoFirst = setTimeout(autoTick, 15000); autoFirst.unref(); autoTimer = setInterval(autoTick, autoEveryMs); autoTimer.unref(); }
       return httpServer.address();
     },
     async close() {
-      clearInterval(heartbeat);
+      clearInterval(heartbeat); clearInterval(autoTimer); clearTimeout(autoFirst);
       for (const s of streams) { try { s.end(); } catch (e) { /* ignore */ } }
       streams.clear();
       await new Promise((r) => httpServer.close(r));

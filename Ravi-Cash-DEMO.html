@@ -1383,6 +1383,27 @@ td .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; ma
 @media (max-width: 720px) { .bnav.n6 a, .bnav.n6 button { font-size: 9.8px; letter-spacing: -.1px; gap: 2px; } .bnav.n6 svg { width: 20px; height: 20px; } }
 @media (max-width: 760px) { .kv { grid-template-columns: 112px minmax(0, 1fr); gap: 8px 12px; } .kv dd { overflow-wrap: anywhere; word-break: normal; } }
 
+/* ---- Backup & Restore page and the dashboard reminder */
+.backup-host:not(:empty) { margin-bottom: 16px; }
+.bkp-remind { align-items: center; gap: 14px; flex-wrap: wrap; }
+.bkp-remind > svg { flex: none; }
+.bkp-file { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; pointer-events: none; }
+.bkp-preview { display: flex; flex-direction: column; gap: 12px; padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-2); }
+.bkp-cmp { background: var(--surface); border-radius: 10px; overflow: hidden; }
+.bkp-cmp th, .bkp-cmp td { padding: 9px 12px; }
+.bkp-cmp td.num, .bkp-cmp th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.bkp-copies { display: flex; flex-direction: column; }
+.bkp-copy { display: flex; gap: 12px; align-items: center; justify-content: space-between; padding: 11px 0; border-top: 1px solid var(--line); }
+.bkp-copy:first-child { border-top: 0; padding-top: 0; }
+.bkp-copy-t { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; min-width: 0; }
+.bkp-copy-k { flex-basis: 100%; color: var(--ink-3); font-size: 12px; }
+@media (max-width: 720px) {
+  .bkp-copy { flex-direction: column; align-items: stretch; gap: 8px; }
+  .bkp-copy .row { justify-content: flex-start; }
+  .bkp-remind > div:last-child { width: 100%; }
+  .bkp-cmp th, .bkp-cmp td { padding: 8px 9px; font-size: 12.5px; }
+}
+
 </style>
   <style>
 /* Ravi Cash — splash, cinematic entrance and login. Motion is subtle and plays once per session. */
@@ -2126,6 +2147,9 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
       pubUser, vView, counted, reviewOf, vlabel, audit, notify, checkPassword, makeCredentials, netFor, registerOf, currentBalance, authenticate,
       setupKey: String(opts.setupKey || '').trim(),   // optional: first-time setup on a public server needs this key
       beforeWipe: opts.beforeWipe || null,   // optional: a server with real storage makes a safety backup before "clear all data"
+      beforeErase: opts.beforeErase || null,      // optional: ... and a (cheap, throttled) copy before any permanent delete of vouchers, users or branches
+      beforeRestore: opts.beforeRestore || null,  // optional: ... and a full copy of what is there before a backup is restored over it
+      maxBackupMb: opts.maxBackupMb || 0,         // the largest backup file this server accepts (0 = no limit, e.g. the browser demo)
     };
 
     /* ------------------------------------------------------------ auth methods */
@@ -3511,6 +3535,7 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
       out.branches = brs.map((b) => branchStats(s, b, range.from, range.to));
       out.scope = scopeId ? { branchId: scopeId, name: branchById(s, scopeId).name, isMain: isMainBranch(s, branchById(s, scopeId)) } : { branchId: '' };
       out.books = booksFor(s, u, range.from, range.to > today ? today : range.to, scopeId);
+      if (isSuper(u) && H.backupStatus) out.backup = H.backupStatus(s);       // the "take a backup" reminder
       return out;
     });
 
@@ -3834,6 +3859,13 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
       return { vouchers: dv.vouchers, blobs: dv.blobs.concat(dt.blobs), statements: stBefore - s.statements.length, tours: dt.tours.length, visits: dt.visits.length };
     }
 
+    /* A server with real storage keeps a copy of everything (database AND receipt photos) before anything is erased for good,
+     * so a mistaken delete can be put back from Backup → "Copies kept by the server". If the copy cannot be saved, nothing is deleted. */
+    const safetyCopy = async () => {
+      if (!H.beforeErase) return;
+      try { await H.beforeErase(); } catch (e) { throw new ApiError('VALIDATION', 'A safety copy could not be saved, so nothing was deleted (' + (e && e.message ? e.message : e) + ').'); }
+    };
+
     const dropBlobs = async (ctx, ids) => { for (const id of ids) { try { await ctx.storage.del('att:' + id); } catch (e) { /* an orphan file is harmless */ } } };
 
     function counts(s) {
@@ -3896,6 +3928,7 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
       const reason = cleanText(p.reason, 5, 500, 'Reason for deleting');
       const want = new Set(ids.map(String));
       if (s.vouchers.filter((v) => want.has(v.id)).length !== want.size) throw new ApiError('NOT_FOUND', 'Some of these vouchers no longer exist. Refresh the page and try again.');
+      await safetyCopy();
       const { vouchers, blobs } = dropVouchers(s, (v) => want.has(v.id));
       if (byFilter && vouchers.length > MAX_BATCH) {
         // too many for one audit entry each: keep one entry that says exactly what was erased
@@ -3920,6 +3953,7 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
       const o = s.outstanding.find((x) => x.id === p.id);
       if (!o || !(isSuper(ctx.user) || o.branchId === ctx.user.branchId)) throw new ApiError('NOT_FOUND', 'Outstanding entry not found');
       const reason = cleanText(p.reason, 5, 500, 'Reason for deleting');
+      await safetyCopy();
       s.outstanding = s.outstanding.filter((x) => x !== o);
       await audit(ctx, { entity: 'OUTSTANDING', entityId: o.id, entityLabel: o.partyName, action: 'DELETE', branchId: o.branchId,
         old: { party: o.partyName, direction: o.direction, amount: o.amountPaise / 100, settled: o.settledPaise / 100, due: o.dueDate, status: o.status, reference: o.reference || '' }, new: null, reason });
@@ -3937,6 +3971,7 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
       }
       const reason = cleanText(p.reason, 5, 500, 'Reason for deleting');
       const label = t.fullName + ' (' + t.username + ')', branchId = t.branchId, b = branchById(s, branchId);
+      await safetyCopy();
       const r = dropUsers(s, new Set([t.id]));
       await audit(ctx, { entity: 'USER', entityId: t.id, entityLabel: label, action: 'PURGE', branchId,
         old: { name: t.fullName, username: t.username, role: t.role, branch: b ? b.name : '', vouchersErased: r.vouchers.length, statementsErased: r.statements }, new: null, reason });
@@ -3970,6 +4005,7 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
         }
         return { ok: true, removed: { users: targets.length, vouchers: 0, statements: 0 } };
       }
+      await safetyCopy();
       const info = targets.map((t) => ({ t, label: t.fullName + ' (' + t.username + ')', b: branchById(s, t.branchId), n: s.vouchers.filter((v) => v.userId === t.id).length, st: s.statements.filter((x) => x.userId === t.id).length }));
       const r = dropUsers(s, set);
       for (const i of info) {
@@ -3994,6 +4030,7 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
       const reason = cleanText(p.reason, 5, 500, 'Reason for deleting');
       const c = branchCounts(s, b);
       const uids = branchUserIds(s, b);
+      await safetyCopy();
       const r = dropUsers(s, uids);
       const dv = dropVouchers(s, (v) => v.branchId === b.id);          // vouchers of this branch written by users who since moved away
       const dt = dropTours(s, (x) => x.branchId === b.id);             // tours and meetings of this branch
@@ -4719,6 +4756,13 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
       }
     });
 
+    /* A restored backup brings its own locations and day-wise routes back: `map` = { loc: {...}, 'trail:YYYY-MM-DD': {...} }. */
+    H.replaceLocations = (map) => serial(async () => {
+      try { await H.storage.del('loc'); } catch (e) { /* none */ }
+      for (const k of await H.storage.keys('trail:')) { try { await H.storage.del(k); } catch (e) { /* gone */ } }
+      for (const k of Object.keys(map)) await H.storage.set(k, map[k]);
+    });
+
     /* ------------------------------------------------------ admin / CEO views */
     function activityOf(s, u, today, vToday) {
       const tour = s.tours.find((t) => t.userId === u.id && t.status === 'PLANNED' && t.startDate <= today && today <= t.endDate) || null;
@@ -4817,6 +4861,312 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
       const total = rows.length;
       rows = rows.slice(0, 500).map((v) => meetingRow(s, v));
       return { total, withLocation: rows.filter((x) => x.geo).length, rows };
+    });
+  });
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+  <script>
+/* Ravi Cash — backup file and restore.
+ *
+ * A backup is ONE JSON file with everything: branches, users (with their password hashes — never the passwords),
+ * vouchers, registers, statements, outstanding, tours, notifications, the audit trail, settings and (optionally) the
+ * receipt / meeting photos. It can be saved anywhere (Google Drive, WhatsApp, pen drive) and restored later.
+ *
+ *   backup.info       what the system holds now, when it was last backed up, is a reminder due?   (Super Admin)
+ *   backup.export     the backup file                                                              (Super Admin)
+ *   backup.restore    put a backup file back — asks the password again, a typed word, and first
+ *                     keeps a copy of what is there now so a wrong restore can itself be undone     (Super Admin)
+ *   backup.configure  how many days before the dashboard reminds to take a backup
+ *   backup.list / backup.get / backup.restoreCopy
+ *                     the copies a self-hosted server keeps by itself (hourly, daily, before every
+ *                     permanent delete) — download one, or restore one without any file
+ *
+ * What a restore deliberately does NOT bring back from the file: people who are signed in right now stay signed in
+ * (if they still exist in the backup), and the voucher numbers never go backwards — a number that was already given
+ * out is not given out again.
+ */
+(function (g) {
+  'use strict';
+  const RW = (g.RW = g.RW || {});
+  RW.serverModules = RW.serverModules || [];
+
+  const FORMAT = 'ravi-cash-backup';
+  const VERSION = 1;
+  const APP = 'Ravi Cash 5.4';
+  const ROLES = ['SUPER_ADMIN', 'CEO', 'BRANCH_ADMIN', 'USER', 'VIEWER'];
+  const CORE_LISTS = ['branches', 'users', 'registers', 'vouchers', 'attachments', 'statements', 'outstanding', 'notifications', 'audit'];
+  const OPTIONAL_LISTS = ['tours', 'visits'];
+  const MAX_ITEMS = 2000000;
+  const CONFIRM_PHRASE = 'RESTORE';
+  const isObj = (x) => !!x && typeof x === 'object' && !Array.isArray(x);
+  const bad = (msg) => new RW.ApiError('VALIDATION', msg);
+
+  /* Numbers shown in the preview and stored in the file header. Pure: also used by the browser to preview a file. */
+  function summary(db) {
+    const arr = (k) => (Array.isArray(db && db[k]) ? db[k] : []);
+    let inP = 0, outP = 0, first = '', last = '';
+    for (const v of arr('vouchers')) {
+      if (v && v.status === 'ACTIVE' && v.review !== 'INVALID') { if (v.type === 'RECEIPT') inP += v.amountPaise || 0; else outP += v.amountPaise || 0; }
+      if (v && v.date) { if (!first || v.date < first) first = v.date; if (v.date > last) last = v.date; }
+    }
+    return {
+      branches: arr('branches').length, users: arr('users').filter((u) => u && !u.deleted).length, vouchers: arr('vouchers').length,
+      photos: arr('attachments').length, tours: arr('tours').length, outstanding: arr('outstanding').length, statements: arr('statements').length,
+      audit: arr('audit').length, cashInPaise: inP, cashOutPaise: outP, firstVoucherDate: first, lastVoucherDate: last,
+    };
+  }
+
+  /* Is this file really a Ravi Cash backup, whole and undamaged? Throws a ValidationError saying what is wrong.
+   * Returns { db, kv, warnings }. (The same function runs in the browser for the preview and on the server for the restore.) */
+  async function checkFile(file) {
+    if (!isObj(file) || file.format !== FORMAT) throw bad('This is not a Ravi Cash backup file. Choose the .json file that was saved with "Download backup".');
+    if (!(Number(file.version) >= 1)) throw bad('This backup file has no version number, so it cannot be trusted.');
+    if (Number(file.version) > VERSION) throw bad('This backup was made by a newer Ravi Cash (file version ' + file.version + '). Update the app first, then restore it.');
+    const d = file.data;
+    if (!isObj(d) || !isObj(d.db)) throw bad('The backup file is incomplete: it holds no data.');
+    if (typeof file.checksum !== 'string' || !/^[0-9a-f]{64}$/.test(file.checksum)) throw bad('The backup file has no checksum, so it cannot be checked. Use a file saved by "Download backup".');
+    const sum = await RW.sha256Hex(JSON.stringify(d));
+    if (sum !== file.checksum) throw bad('The backup file is damaged or was changed after it was saved (its checksum does not match). Use another copy of the backup.');
+    const db = d.db, kv = isObj(d.kv) ? d.kv : {};
+    for (const k of CORE_LISTS) if (!Array.isArray(db[k])) throw bad('The backup is incomplete: the list "' + k + '" is missing.');
+    for (const k of OPTIONAL_LISTS) if (db[k] !== undefined && !Array.isArray(db[k])) throw bad('The backup is damaged: "' + k + '" is not a list.');
+    for (const k of CORE_LISTS.concat(OPTIONAL_LISTS)) if ((db[k] || []).length > MAX_ITEMS) throw bad('The backup is too large to restore.');
+    for (const k of ['counters', 'seq', 'settings']) if (db[k] !== undefined && !isObj(db[k])) throw bad('The backup is damaged: "' + k + '" is not valid.');
+    const seen = (list, what, check) => {
+      const ids = new Set();
+      for (const x of list) {
+        if (!isObj(x) || typeof x.id !== 'string' || !x.id) throw bad('The backup is damaged: a ' + what + ' has no id.');
+        if (ids.has(x.id)) throw bad('The backup is damaged: the ' + what + ' id ' + x.id + ' appears twice.');
+        ids.add(x.id);
+        if (check) check(x);
+      }
+      return ids;
+    };
+    const branchIds = seen(db.branches, 'branch', (b) => { if (typeof b.code !== 'string' || !b.code) throw bad('The backup is damaged: a branch has no code.'); });
+    seen(db.users, 'user', (u) => {
+      if (!ROLES.includes(u.role)) throw bad('The backup is damaged: user "' + u.username + '" has an unknown role.');
+      if (typeof u.username !== 'string' || !u.username || typeof u.pwHash !== 'string' || typeof u.pwSalt !== 'string') throw bad('The backup is damaged: a user is missing sign-in details.');
+    });
+    seen(db.vouchers, 'voucher', (v) => {
+      if (v.type !== 'PAYMENT' && v.type !== 'RECEIPT') throw bad('The backup is damaged: a voucher has no type.');
+      if (!Number.isInteger(v.amountPaise) || v.amountPaise < 0) throw bad('The backup is damaged: a voucher has an invalid amount.');
+      if (typeof v.date !== 'string') throw bad('The backup is damaged: a voucher has no date.');
+    });
+    if (!db.users.some((u) => u.role === 'SUPER_ADMIN' && !u.deleted && u.status === 'ACTIVE')) {
+      throw bad('This backup has no active Super Admin, so nobody could sign in after restoring it. It cannot be restored.');
+    }
+    const warnings = [];
+    if (db.users.some((u) => !u.deleted && u.role !== 'SUPER_ADMIN' && u.role !== 'CEO' && !branchIds.has(u.branchId))) warnings.push('Some users in this backup belong to a branch that is not in it; they will not be able to sign in.');
+    // the receipt / meeting photos
+    for (const k of Object.keys(kv)) {
+      if (k === 'loc') { if (!isObj(kv[k])) throw bad('The backup is damaged: the location data is not valid.'); continue; }
+      if (/^trail:\d{4}-\d{2}-\d{2}$/.test(k)) { if (!isObj(kv[k])) throw bad('The backup is damaged: a location trail is not valid.'); continue; }
+      if (/^att:[A-Za-z0-9_.-]{1,100}$/.test(k)) { if (typeof kv[k] !== 'string' || !/^data:[a-z0-9/+.-]+;base64,/i.test(kv[k])) throw bad('The backup is damaged: a photo is not valid.'); continue; }
+      throw bad('The backup contains something unexpected (' + String(k).slice(0, 30) + ').');
+    }
+    return { db, kv, warnings };
+  }
+
+  RW.Backup = { FORMAT, VERSION, CONFIRM_PHRASE, summary, checkFile };
+
+  RW.serverModules.push(function (H) {
+    const { ApiError, def, audit, notify, nowIso, cleanText } = H;
+    const SUPER = ['SUPER_ADMIN'];
+    const DAY = 864e5;
+    const REMIND_CHOICES = [0, 1, 3, 7, 15, 30];
+
+    /* ---------------------------------------------------------------- reminder */
+    H.backupStatus = (s) => {
+      const st = s.settings || {};
+      const days = REMIND_CHOICES.includes(st.backupReminderDays) ? st.backupReminderDays : 7;      // 0 = no reminder
+      const last = st.lastBackupAt || null;
+      const age = last ? (H.clock() - Date.parse(last)) / DAY : null;
+      const hasData = (s.vouchers || []).length > 0;
+      return { lastAt: last, lastBy: st.lastBackupBy || '', remindDays: days, ageDays: age === null ? null : Math.floor(age), due: days > 0 && hasData && (age === null || age >= days) };
+    };
+
+    /* ------------------------------------------------------------ build a file */
+    const detach = (x) => JSON.parse(JSON.stringify(x));
+    const withoutSecrets = (s) => { const o = Object.assign({}, s); delete o.sessions; delete o.loginFails; return o; };
+    const stamp = () => { const t = H.clock() + 19800000; return new Date(t).toISOString().slice(0, 10) + '-' + new Date(t).toISOString().slice(11, 16).replace(':', ''); };
+
+    async function readPhotos(s, kv, getBlob) {
+      let included = 0, missing = 0;
+      for (const a of s.attachments) {
+        const blob = await getBlob(a.id);
+        if (typeof blob === 'string' && blob) { kv['att:' + a.id] = blob; included++; } else missing++;
+      }
+      return { included, missing };
+    }
+
+    async function makeFile(db, kv, meta) {
+      const data = { db: detach(withoutSecrets(db)), kv };
+      const file = {
+        format: FORMAT, version: VERSION, app: APP, createdAt: nowIso(), createdBy: meta.by || '', source: meta.source || 'manual',
+        company: (db.settings && db.settings.company && db.settings.company.name) || '', includesPhotos: !!meta.includesPhotos,
+        photoCount: meta.photoCount || 0, photosMissing: meta.photosMissing || 0, counts: summary(db),
+        note: 'Keep this file private: it holds your whole business data and every user\'s password hash. Restore it from Backup in the app.',
+        checksum: await RW.sha256Hex(JSON.stringify(data)), data,
+      };
+      return file;
+    }
+
+    async function liveKv(s, withPhotos) {
+      const kv = {};
+      let photos = { included: 0, missing: 0 };
+      if (withPhotos) photos = await readPhotos(s, kv, (id) => H.storage.get('att:' + id));
+      const loc = await H.storage.get('loc');
+      if (loc) kv.loc = loc;
+      for (const k of await H.storage.keys('trail:')) { const t = await H.storage.get(k); if (t) kv[k] = t; }
+      return { kv, photos };
+    }
+
+    /* A copy the server kept itself (read from its backups folder) turned into the same file format. */
+    async function fileFromCopy(id, by) {
+      if (!H.storage.readBackup) throw new ApiError('VALIDATION', 'This installation does not keep automatic copies.');
+      let c;
+      try { c = await H.storage.readBackup(id); } catch (e) { throw new ApiError('NOT_FOUND', 'That copy is not available any more.'); }
+      const db = c.db;
+      if (!isObj(db) || !Array.isArray(db.vouchers)) throw new ApiError('VALIDATION', 'That copy is damaged and cannot be used.');
+      for (const k of CORE_LISTS.concat(OPTIONAL_LISTS)) if (db[k] === undefined) db[k] = [];
+      const kv = {};
+      let photos = { included: 0, missing: 0 };
+      const have = c.kv || {};
+      if (c.full) photos = await readPhotos(db, kv, async (aid) => have['att:' + aid]);
+      if (have.loc) kv.loc = have.loc;
+      for (const k of Object.keys(have)) if (k.startsWith('trail:')) kv[k] = have[k];
+      return makeFile(db, kv, { by, source: 'server-copy', includesPhotos: !!c.full, photoCount: photos.included, photosMissing: photos.missing });
+    }
+
+    /* ------------------------------------------------------- password + restore */
+    async function askPassword(ctx, p) {
+      const s = ctx.state, u = ctx.user;
+      if (String(p.confirm || '').trim().toUpperCase() !== CONFIRM_PHRASE) throw new ApiError('VALIDATION', 'Type ' + CONFIRM_PHRASE + ' to confirm');
+      const key = 'restore:' + u.id, now = H.clock();
+      const f = s.loginFails[key];
+      if (f && f.lockedUntil && f.lockedUntil > now) { ctx.dirty = false; throw new ApiError('RATE_LIMIT', 'Too many wrong passwords. Try again in a few minutes.'); }
+      const hash = await RW.hashPassword(String(p.password || ''), u.pwSalt, u.pwIter);
+      if (!RW.timingSafeEqualHex(hash, u.pwHash)) {
+        const rec = f && f.first > now - 600000 ? f : { count: 0, first: now };
+        rec.count++;
+        if (rec.count >= 5) { rec.lockedUntil = now + 300000; rec.count = 0; rec.first = now; }
+        s.loginFails[key] = rec;
+        await audit(ctx, { entity: 'SYSTEM', action: 'RESTORE_FAILED', entityLabel: 'Wrong password while restoring a backup', branchId: null });
+        await ctx.save();
+        throw new ApiError('VALIDATION', 'Your password is incorrect');
+      }
+      delete s.loginFails[key];
+    }
+
+    function fillDefaults(db) {
+      const e = H.emptyState(), D = H.DEFAULT_SETTINGS();
+      for (const k of Object.keys(e)) if (db[k] === undefined) db[k] = e[k];
+      db.seq = Object.assign({}, e.seq, db.seq);
+      db.counters = Object.assign({}, e.counters, db.counters);
+      const st = db.settings = Object.assign({}, D, db.settings);
+      st.company = Object.assign({}, D.company, st.company);
+      st.numbering = { PAYMENT: Object.assign({}, D.numbering.PAYMENT, (st.numbering || {}).PAYMENT), RECEIPT: Object.assign({}, D.numbering.RECEIPT, (st.numbering || {}).RECEIPT) };
+      db.sessions = {}; db.loginFails = {};
+      return db;
+    }
+
+    async function doRestore(ctx, file, p, how) {
+      const s = ctx.state, u = ctx.user;
+      const reason = p.reason ? cleanText(p.reason, 0, 500, 'Reason') : '';
+      await askPassword(ctx, p);
+      const chk = await checkFile(file);                                  // everything is checked BEFORE anything is touched
+      const before = summary(s);
+      // A server with real storage keeps a full copy of what is there now first; if that fails nothing is changed.
+      let safety = null;
+      if (H.beforeRestore) {
+        try { safety = (await H.beforeRestore()) || null; } catch (e) { throw new ApiError('VALIDATION', 'A safety copy of the current data could not be saved, so nothing was changed (' + (e && e.message ? e.message : e) + ').'); }
+      }
+      const keep = { rev: s.rev, sessions: s.sessions, loginFails: s.loginFails, counters: Object.assign({}, s.counters), lastBackupAt: s.settings.lastBackupAt, lastBackupBy: s.settings.lastBackupBy };
+      const fresh = fillDefaults(chk.db);
+      for (const k of Object.keys(s)) delete s[k];
+      Object.assign(s, fresh);
+      s.rev = keep.rev;
+      s.loginFails = keep.loginFails;
+      for (const k of Object.keys(keep.sessions)) { const x = H.userById(s, keep.sessions[k].userId); if (x && !x.deleted) s.sessions[k] = keep.sessions[k]; }
+      // numbers that were already given out are never given out again
+      for (const t of ['PAYMENT', 'RECEIPT']) s.counters[t] = Math.max(s.counters[t] || 0, keep.counters[t] || 0);
+      if (keep.lastBackupAt) { s.settings.lastBackupAt = keep.lastBackupAt; s.settings.lastBackupBy = keep.lastBackupBy || ''; }
+      const after = summary(s);
+      for (const k of Object.keys(chk.kv)) if (k.startsWith('att:')) ctx.blobs[k.slice(4)] = chk.kv[k];
+      await audit(ctx, { entity: 'SYSTEM', action: 'RESTORE', entityLabel: 'Data restored from a backup', branchId: null,
+        old: before, new: { restoredBy: u.fullName, how, backupCreatedAt: file.createdAt || '', backupSource: file.source || '', includesPhotos: !!file.includesPhotos, ...after }, reason });
+      notify(ctx, { kind: 'SYSTEM', title: 'Data was restored from a backup', body: u.fullName + ' restored the system from a backup' + (file.createdAt ? ' made on ' + RW.fmtDateTime(file.createdAt) : '') + '. Vouchers now: ' + after.vouchers + (reason ? '. Reason: ' + reason : ''), branchId: null, important: true });
+      await ctx.save();                                                   // photos first, then the database
+      const keepLoc = Object.keys(chk.kv).filter((k) => k === 'loc' || k.startsWith('trail:'));
+      if (keepLoc.length && H.replaceLocations) await H.replaceLocations(Object.fromEntries(keepLoc.map((k) => [k, chk.kv[k]])));
+      const me = H.userById(s, u.id);
+      return { ok: true, before, after, photosRestored: Object.keys(chk.kv).filter((k) => k.startsWith('att:')).length, warnings: chk.warnings, safetyCopy: safety,
+        signedOut: !(me && !me.deleted && me.status === 'ACTIVE' && s.sessions[ctx.sessionKey]) };
+    }
+
+    /* ------------------------------------------------------------------ methods */
+    def('backup.info', { roles: SUPER }, async (ctx) => {
+      const s = ctx.state;
+      const photoBytes = s.attachments.reduce((a, x) => a + (x.size || 0), 0);
+      return {
+        counts: summary(s), photoBytes, estimatedBytes: Math.round(photoBytes * 1.37),
+        status: H.backupStatus(s), auto: { supported: !!H.storage.listBackups },
+        maxFileMb: Number(H.maxBackupMb) || 0, company: s.settings.company.name,
+      };
+    });
+
+    def('backup.export', { w: true, roles: SUPER }, async (ctx, p) => {
+      const s = ctx.state;
+      const withPhotos = p.photos !== false;
+      const { kv, photos } = await liveKv(s, withPhotos);
+      const file = await makeFile(s, kv, { by: ctx.user.fullName, source: 'manual', includesPhotos: withPhotos, photoCount: photos.included, photosMissing: photos.missing });
+      // remember it (the file itself was sealed above, so this note is not inside it)
+      s.settings.lastBackupAt = nowIso(); s.settings.lastBackupBy = ctx.user.fullName;
+      await audit(ctx, { entity: 'SYSTEM', action: 'BACKUP', entityLabel: 'Backup file downloaded', branchId: null, new: Object.assign({ withPhotos, photos: photos.included }, file.counts) });
+      return { file, name: 'ravi-cash-backup-' + stamp() + '.json' };
+    });
+
+    def('backup.restore', { w: true, roles: SUPER }, async (ctx, p) => {
+      if (!isObj(p.backup)) throw new ApiError('VALIDATION', 'Choose a backup file first');
+      return doRestore(ctx, p.backup, p, 'file');
+    });
+
+    def('backup.configure', { w: true, roles: SUPER }, async (ctx, p) => {
+      const days = parseInt(p.remindDays, 10);
+      if (!REMIND_CHOICES.includes(days)) throw new ApiError('VALIDATION', 'Choose 0 (no reminder), 1, 3, 7, 15 or 30 days');
+      const st = ctx.state.settings;
+      const old = H.backupStatus(ctx.state).remindDays;
+      if (days === old) return { ok: true };
+      st.backupReminderDays = days;
+      await audit(ctx, { entity: 'SETTINGS', entityId: 'settings', entityLabel: 'Backup reminder', action: 'EDIT', branchId: null, old: { backupReminderDays: old }, new: { backupReminderDays: days } });
+      return { ok: true };
+    });
+
+    /* The copies the server keeps by itself. Old rolling copies are thinned for the screen: the newest 24, then the last one of each day. */
+    def('backup.list', { roles: SUPER }, async () => {
+      if (!H.storage.listBackups) return { supported: false, rows: [] };
+      const all = await H.storage.listBackups();
+      const rows = [], days = new Set();
+      let autoShown = 0;
+      for (const c of all) {                                              // newest first
+        if (c.kind !== 'auto') { rows.push(c); continue; }
+        const day = RW.istDate(c.at);
+        if (autoShown < 24) { autoShown++; days.add(day); rows.push(c); continue; }
+        if (!days.has(day) && days.size < 60) { days.add(day); rows.push(c); }
+      }
+      return { supported: true, rows: rows.slice(0, 150) };
+    });
+
+    def('backup.get', { w: true, roles: SUPER }, async (ctx, p) => {
+      const file = await fileFromCopy(String(p.id || ''), ctx.user.fullName);
+      await audit(ctx, { entity: 'SYSTEM', action: 'BACKUP', entityLabel: 'Server copy downloaded', branchId: null, new: { copy: String(p.id).slice(0, 80) } });
+      return { file, name: 'ravi-cash-copy-' + String(p.id).replace(/[^A-Za-z0-9-]/g, '') + '.json' };
+    });
+
+    def('backup.restoreCopy', { w: true, roles: SUPER }, async (ctx, p) => {
+      const file = await fileFromCopy(String(p.id || ''), ctx.user.fullName);
+      return doRestore(ctx, file, p, 'server copy ' + String(p.id).slice(0, 60));
     });
   });
 })(typeof window !== 'undefined' ? window : globalThis);
@@ -5227,7 +5577,7 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
     async function call(method, params, o) {
       const token = (o && o.token === null) ? null : session.token;
       const ctl = new AbortController();
-      const timer = setTimeout(() => ctl.abort(), (method === 'vouchers.addAttachment' || method === 'vouchers.create') ? 120000 : 45000);
+      const timer = setTimeout(() => ctl.abort(), method.startsWith('backup.') ? 600000 : (method === 'vouchers.addAttachment' || method === 'vouchers.create') ? 120000 : 45000);
       let res, body;
       try {
         res = await fetch(base + '/call', { method: 'POST', signal: ctl.signal, credentials: 'omit', cache: 'no-store',
@@ -8013,6 +8363,23 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
     const body = h('div', { class: 'stack' }, V.loading(5));
     root.appendChild(body);
 
+    /* ----- backup reminder (main admin only): shown while the last backup is older than the chosen number of days */
+    const backupHost = h('div', { class: 'backup-host' });
+    root.insertBefore(backupHost, body);
+    function paintBackup(b) {
+      UI.clear(backupHost);
+      if (!b || !b.due) return;
+      const when = b.lastAt ? 'The last backup was ' + (b.ageDays === 0 ? 'today' : b.ageDays + ' day' + (b.ageDays === 1 ? '' : 's') + ' ago') + ' (' + RW.fmtDateTime(b.lastAt) + ').' : 'No backup has been taken yet.';
+      const btn = h('button', { class: 'btn btn-primary btn-sm', type: 'button' }, UI.icon('download', 15), 'Download backup now');
+      btn.addEventListener('click', async () => {
+        btn.disabled = true; btn.classList.add('busy');
+        try { const r = await RW.v.downloadBackup({ photos: true }); RW.v.backupSavedToast(r); } catch (e) { UI.toast(UI.errMsg(e), 'error'); } finally { btn.disabled = false; btn.classList.remove('busy'); }
+      });
+      backupHost.appendChild(h('div', { class: 'callout warn bkp-remind' }, UI.icon('cloudup', 18),
+        h('div', { style: { flex: 1, minWidth: 0 } }, h('b', null, 'Time to take a backup'), h('div', null, when + ' One file keeps your data safe if anything is erased by mistake.')),
+        h('div', { class: 'row', style: { gap: '8px', flex: 'none' } }, btn, h('a', { class: 'btn btn-ghost btn-sm', href: '#/backup' }, 'Backup page'))));
+    }
+
     /* ----- my tour: shown only while a tour is running or about to start */
     const tourHost = h('div', { class: 'tour-host' });
     root.insertBefore(tourHost, body);
@@ -8153,6 +8520,7 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
         if (first) { build(d); }
         fill(d, first);
         first = false;
+        paintBackup(d.backup);
         body.classList.remove('loading-dim');
       } catch (e) { if (!dead) { body.classList.remove('loading-dim'); if (first) UI.mount(body, V.errorCard(e, () => load(true))); else UI.toast(UI.errMsg(e), 'error'); } }
     }
@@ -9802,13 +10170,19 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
       ? (demo ? 'The demo is replaced by fresh sample data.' : 'Branches, users and settings are removed too. Afterwards the site shows the first-time setup screen, where you create your company and Super Admin again.')
       : 'Branches, users and settings stay. Everyone remains signed in.';
     const backup = demo ? 'This is demo data kept only in this browser — no backup is made.' : 'Before anything is deleted, the server saves a full backup copy (database and receipt photos) in its data/backups folder.';
+    const cbFile = h('input', { type: 'checkbox', checked: true });
+    const fileOpt = demo && all ? null : h('label', { class: 'opt-row' }, cbFile, h('span', null, 'Download a backup file first (with photos)', h('small', null, 'Recommended. A file you can keep on your own phone or computer and restore later from Backup.')));
     UI.modal({ title: all ? (demo ? 'Reset the demo' : 'Reset entire system') : 'Clear all transactions', size: 'md', persistent: true,
       body: h('div', { class: 'stack', style: { gap: '14px' } }, sum, h('p', { class: 'muted', style: { margin: 0, fontSize: '13px' } }, note), options,
-        h('div', { class: 'callout info' }, UI.icon('shield', 16), h('span', null, backup)), fWhy, fPw, fPhrase),
+        h('div', { class: 'callout info' }, UI.icon('shield', 16), h('span', null, backup)), fileOpt, fWhy, fPw, fPhrase),
       actions: [{ label: 'Cancel' }, { label: all ? (demo ? 'Reset demo' : 'Erase everything') : 'Clear all transactions', kind: 'danger', icon: 'trash', keepOpen: true, onClick: async (m) => {
         UI.fieldError(fPw, ''); UI.fieldError(fPhrase, '');
         if (!pw.value) { UI.fieldError(fPw, 'Enter your password'); return false; }
         if (phrase.value.trim() !== 'DELETE ALL') { UI.fieldError(fPhrase, 'Type DELETE ALL exactly as shown'); return false; }
+        if (fileOpt && cbFile.checked) {
+          try { const b = await V.downloadBackup({ photos: true }); UI.toast('Backup file saved as ' + b.name, 'info', { ms: 7000 }); }
+          catch (e) { UI.toast('The backup file could not be saved, so nothing was deleted: ' + UI.errMsg(e), 'error', { ms: 9000 }); return false; }
+        }
         let r;
         try { r = await RW.api.call('system.clear', { scope, password: pw.value, confirm: phrase.value.trim(), reason: why.value, resetNumbers: cbNum.checked, resetOpening: cbOpen.checked, clearAudit: cbAudit.checked }); }
         catch (e) { if (/password|wrong/i.test(e.message || '')) { UI.fieldError(fPw, e.message); return false; } throw e; }
@@ -9866,6 +10240,9 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
         h('label', { style: { display: 'flex', gap: '10px', alignItems: 'flex-start', fontSize: '13.5px' } }, locOn, h('span', null, h('b', null, 'Staff share their live location'), h('span', { class: 'muted' }, ' — Users and Branch Admins are asked once; while they are signed in and the app is open their position is sent about once a minute, and each tour meeting saves the place it was recorded from. Switch off to stop it for everybody.'))),
         h('div', { class: 'form-grid', style: { marginTop: '14px' } }, UI.field('Keep each day\'s route for (days)', keepDays, { hint: '7 to 90. Older routes are erased automatically.' }))),
       h('div', { class: 'card' }, h('div', { class: 'card-b stack', style: { gap: '12px' } }, UI.field('Reason', why, { optional: true }), h('div', null, h('button', { class: 'btn btn-primary btn-lg', type: 'button', onclick: (e) => save(e.currentTarget) }, UI.icon('check', 18), 'Save settings')))),
+      h('div', { class: 'card' }, h('div', { class: 'card-b row sb', style: { gap: '14px', flexWrap: 'wrap' } },
+        h('div', { style: { minWidth: 0, flex: '1 1 260px' } }, h('b', null, 'Backup & restore'), h('p', { class: 'muted', style: { margin: '4px 0 0', fontSize: '12.5px' } }, 'Save all your data as one file, restore it if anything is erased by mistake, and see the copies the server keeps by itself.')),
+        h('a', { class: 'btn btn-ghost', href: '#/backup', style: { flex: 'none' } }, UI.icon('cloudup', 16), 'Open Backup'))),
       h('div', { class: 'card danger-zone' }, h('div', { class: 'card-h' }, h('h3', null, 'Danger zone', h('small', null, 'Permanent — these cannot be undone'))),
         h('div', { class: 'card-b' },
           h('div', { class: 'danger-row' }, h('div', null, h('b', null, 'Clear all transactions'), h('p', { class: 'muted' }, 'Erases every voucher, receipt photo, statement, outstanding entry and notification, for all branches. Branches, users and settings stay. Needs your password.')),
@@ -9967,6 +10344,217 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
         h('div', { class: 'card-b stack', style: { gap: '14px' } }, fCur, fNew, strength, sLabel, fCf, h('div', null, h('button', { class: 'btn btn-primary', type: 'button', onclick: (e) => change(e.currentTarget) }, UI.icon('key', 16), 'Update password'))))));
     return { dispose() { if (locCard) locCard.dispose(); } };
   });
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+  <script>
+/* Ravi Cash — Backup & Restore (Super Admin).
+ *
+ *  - Download a backup: ONE .json file with everything (optionally with the photos).
+ *  - Restore from a backup file: the file is checked here first (is it whole, whose is it, what is in it), compared with
+ *    what the system holds now, and only then restored — after the password and the word RESTORE.
+ *  - The copies a self-hosted server keeps by itself (hourly, daily, before every permanent delete) can be downloaded or restored.
+ *  - A reminder on the dashboard when the last backup is older than the chosen number of days.
+ */
+(function (g) {
+  'use strict';
+  const RW = (g.RW = g.RW || {});
+  const UI = RW.ui, V = RW.v;
+  const { h } = UI;
+
+  const mb = (b) => (b >= 1048576 ? (b / 1048576).toFixed(b >= 10485760 ? 0 : 1) + ' MB' : Math.max(1, Math.round(b / 1024)) + ' KB');
+  const num = (n) => Number(n || 0).toLocaleString('en-IN');
+  const agoText = (iso) => (iso ? RW.fmtDateTime(iso) + ' · ' + RW.timeAgo(iso) : '');
+
+  /* Make the backup file on the server and hand it to the browser as a download. Used by the Backup page, the dashboard
+   * reminder and the "clear all data" dialog. Resolves { name, bytes }. */
+  V.downloadBackup = async function (o) {
+    const r = await RW.api.call('backup.export', { photos: !(o && o.photos === false) });
+    const blob = new Blob([JSON.stringify(r.file)], { type: 'application/json' });
+    UI.download(blob, r.name, 'application/json');
+    return { name: r.name, bytes: blob.size, counts: r.file.counts };
+  };
+  V.backupSavedToast = (r) => UI.toast('Backup saved as ' + r.name + ' (' + mb(r.bytes) + '). Keep it somewhere safe — Google Drive, email, pen drive.', 'success', { ms: 9000 });
+
+  const KIND = {
+    auto: ['Automatic · hourly', 'Ledger only (no photos)'],
+    daily: ['Daily copy', 'Full: ledger + photos'],
+    'before-erase': ['Taken just before something was erased', 'Full: ledger + photos'],
+    'before-clear': ['Taken just before “Clear all data”', 'Full: ledger + photos'],
+    'before-restore': ['Taken just before a restore', 'Full: ledger + photos'],
+  };
+
+  /* The confirmation every restore goes through: password, the word RESTORE, optional reason. */
+  function restoreDialog(o) {
+    const demo = RW.api.kind === 'demo';
+    const keepCopy = h('input', { type: 'checkbox', checked: true });
+    let saved = false;                       // the copy of the current data is made once, even if the password has to be retyped
+    const pw = h('input', { type: 'password', autocomplete: 'current-password', placeholder: 'Your password' });
+    const phrase = h('input', { type: 'text', autocomplete: 'off', autocapitalize: 'characters', placeholder: 'RESTORE' });
+    const why = h('textarea', { rows: 2, maxlength: 500, placeholder: 'Optional — saved in the audit log' });
+    const fPw = UI.field('Your password', pw), fPhrase = UI.field('Type RESTORE to confirm', phrase), fWhy = UI.field('Reason', why, { optional: true });
+    UI.modal({ title: o.title || 'Restore this backup', size: 'md', persistent: true,
+      body: h('div', { class: 'stack', style: { gap: '14px' } },
+        h('div', { class: 'callout warn' }, UI.icon('alert', 16), h('div', null, h('b', null, 'This replaces everything now in the system'), h('div', null, o.lines || []))),
+        h('div', { class: 'callout info' }, UI.icon('shield', 16), h('span', null, demo ? 'A copy of what is there now is not kept by the demo itself — keep the box below ticked.' : 'The server also saves a full copy of what is there now (in its backups folder) before anything is replaced, so even a wrong restore can be undone.')),
+        h('label', { class: 'opt-row' }, keepCopy, h('span', null, 'Download a backup of my current data first', h('small', null, 'Recommended. You get a file of what is there right now, before it is replaced.'))),
+        fWhy, fPw, fPhrase),
+      actions: [{ label: 'Cancel' }, { label: 'Restore now', kind: 'danger', icon: 'history', keepOpen: true, onClick: async (m) => {
+        UI.fieldError(fPw, ''); UI.fieldError(fPhrase, '');
+        if (!pw.value) { UI.fieldError(fPw, 'Enter your password'); return false; }
+        if (phrase.value.trim().toUpperCase() !== 'RESTORE') { UI.fieldError(fPhrase, 'Type RESTORE exactly as shown'); return false; }
+        if (keepCopy.checked && !saved) { try { const r = await V.downloadBackup({ photos: false }); saved = true; UI.toast('Current data saved as ' + r.name, 'info', { ms: 6000 }); } catch (e) { UI.toast('Could not save a copy of the current data: ' + UI.errMsg(e) + ' Nothing was restored.', 'error', { ms: 9000 }); return false; } }
+        let r;
+        try { r = await o.run({ password: pw.value, confirm: phrase.value.trim().toUpperCase(), reason: why.value }); }
+        catch (e) { if (/password|wrong|incorrect|too many/i.test(e.message || '')) { UI.fieldError(fPw, e.message); return false; } throw e; }
+        m.close();
+        UI.toast('Restored. Vouchers now: ' + num(r.after.vouchers) + ' (before: ' + num(r.before.vouchers) + ').' + (r.signedOut ? ' Please sign in again.' : ''), 'success', { ms: 8000 });
+        setTimeout(() => { if (r.signedOut) { RW.api.session.clear(); location.hash = ''; } else location.hash = '#/dashboard'; location.reload(); }, 1400);
+      } }] });
+  }
+
+  RW.route('/backup', async function (root, p, app) {
+    app.title('Backup & Restore');
+    let dead = false;
+    root.appendChild(V.pageHead('Backup & Restore', 'Keep all your data in one file, and put it back if anything is erased by mistake.'));
+    const host = h('div', null, V.loading(5));
+    root.appendChild(host);
+    let info = null, copies = null;
+
+    async function load() {
+      info = await RW.api.call('backup.info', {});
+      copies = info.auto.supported ? await RW.api.call('backup.list', {}) : null;
+      if (!dead) paint();
+    }
+
+    const card = (title, sub, ...kids) => h('div', { class: 'card' }, h('div', { class: 'card-h' }, h('h3', null, title, sub ? h('small', null, sub) : null)), h('div', { class: 'card-b stack', style: { gap: '14px' } }, ...kids));
+
+    /* ------------------------------------------------------------ 1. download */
+    function downloadCard() {
+      const st = info.status, c = info.counts;
+      const withPhotos = h('input', { type: 'checkbox', checked: true });
+      const state = !st.lastAt ? h('div', { class: 'callout warn' }, UI.icon('alert', 16), h('span', null, h('b', null, 'No backup has been taken yet.'), ' Download one now.'))
+        : st.due ? h('div', { class: 'callout warn' }, UI.icon('alert', 16), h('span', null, h('b', null, 'Backup is due.'), ' Last one: ' + agoText(st.lastAt) + (st.lastBy ? ' by ' + st.lastBy : '') + '.'))
+        : h('div', { class: 'callout ok' }, UI.icon('check', 16), h('span', null, h('b', null, 'Backed up.'), ' Last one: ' + agoText(st.lastAt) + (st.lastBy ? ' by ' + st.lastBy : '') + '.'));
+      const sizeNote = h('small', { class: 'muted', style: { display: 'block' } });
+      const upd = () => {
+        const est = withPhotos.checked ? info.estimatedBytes : 0;
+        sizeNote.textContent = num(c.vouchers) + ' vouchers, ' + num(c.users) + ' users, ' + num(c.branches) + ' branches' + (withPhotos.checked && info.photoBytes ? ', ' + num(c.photos) + ' photos (about ' + mb(est) + ' extra)' : '') + '.'
+          + (info.maxFileMb && withPhotos.checked && est > info.maxFileMb * 1048576 * 0.9 ? ' This is close to the ' + info.maxFileMb + ' MB limit for restoring a file — take it without photos.' : '');
+      };
+      withPhotos.addEventListener('change', upd); upd();
+      const btn = h('button', { class: 'btn btn-primary btn-lg', type: 'button' }, UI.icon('download', 17), 'Download backup file');
+      btn.addEventListener('click', async () => {
+        btn.disabled = true; btn.classList.add('busy');
+        try { const r = await V.downloadBackup({ photos: withPhotos.checked }); V.backupSavedToast(r); await load(); }
+        catch (e) { UI.toast(UI.errMsg(e), 'error'); } finally { btn.disabled = false; btn.classList.remove('busy'); }
+      });
+      const remind = UI.select([{ value: 0, label: 'Never remind me' }, { value: 1, label: 'Every day' }, { value: 3, label: 'Every 3 days' }, { value: 7, label: 'Every week' }, { value: 15, label: 'Every 15 days' }, { value: 30, label: 'Every month' }], st.remindDays);
+      remind.addEventListener('change', async () => {
+        try { await RW.api.call('backup.configure', { remindDays: remind.value }); UI.toast(remind.value === '0' ? 'No reminders.' : 'The dashboard will remind you when the last backup is older than that.', 'success'); }
+        catch (e) { UI.toast(UI.errMsg(e), 'error'); }
+      });
+      return card('Download a backup', 'One file with all branches, users, vouchers, statements, tours and the audit trail', state,
+        h('label', { class: 'opt-row' }, withPhotos, h('span', null, 'Include receipt and meeting photos', h('small', null, 'Needed to bring the photos back after they were erased. Makes the file bigger.'))), sizeNote,
+        h('div', null, btn),
+        h('div', { class: 'row', style: { gap: '10px', alignItems: 'center', flexWrap: 'wrap' } }, h('span', { class: 'muted', style: { fontSize: '13px' } }, 'Remind me on the dashboard:'), h('div', { style: { minWidth: '170px' } }, remind)),
+        h('div', { class: 'callout info' }, UI.icon('info', 16), h('span', null, 'Save the file outside this phone/computer — Google Drive, your email, a pen drive. ',
+          h('b', null, 'Keep it private:'), ' it holds all your business data and every user’s sign-in details (as scrambled hashes, not the passwords themselves).')));
+    }
+
+    /* ------------------------------------------------------- 2. restore a file */
+    function restoreCard() {
+      const out = h('div', { class: 'stack', style: { gap: '12px' } });
+      const input = h('input', { type: 'file', accept: '.json,application/json', id: 'bkp-file', class: 'bkp-file' });
+      const pick = h('label', { class: 'btn btn-ghost', for: 'bkp-file' }, UI.icon('cloudup', 16), 'Choose backup file…');
+      input.addEventListener('change', async () => {
+        const f = input.files && input.files[0];
+        if (!f) return;
+        UI.mount(out, h('div', { class: 'callout info' }, UI.icon('clock', 16), h('span', null, 'Checking ' + f.name + ' …')));
+        try {
+          if (info.maxFileMb && f.size > info.maxFileMb * 1048576 * 0.97) throw new Error('This file is ' + mb(f.size) + ', more than this server accepts (' + info.maxFileMb + ' MB). Take backups without photos, or restore from the server’s own copies below.');
+          let file;
+          try { file = JSON.parse(await f.text()); } catch (e) { throw new Error('This file cannot be read — it is not a backup file, or it is cut short.'); }
+          const chk = await RW.Backup.checkFile(file);
+          UI.mount(out, preview(file, chk, f));
+        } catch (e) {
+          UI.mount(out, h('div', { class: 'callout bad' }, UI.icon('alert', 16), h('span', null, h('b', null, 'This file cannot be restored.'), ' ' + UI.errMsg(e))));
+        } finally { input.value = ''; }
+      });
+      return card('Restore from a backup file', 'Pick a file saved earlier with “Download backup file”', h('div', null, pick, input), out,
+        h('p', { class: 'muted', style: { margin: 0, fontSize: '12.5px' } }, 'Nothing changes when you choose a file — you first see what is inside and how it differs from now.'));
+    }
+
+    function preview(file, chk, f) {
+      const B = RW.Backup.summary(chk.db), N = info.counts;
+      const photosInFile = Object.keys(chk.kv).filter((k) => k.startsWith('att:')).length;
+      const row = (k, a, b, money) => { const fmt = (v) => (money ? RW.fmtINR(v) : num(v)); return h('tr', null, h('td', null, k), h('td', { class: 'num' }, fmt(a)), h('td', { class: 'num' }, h('b', null, fmt(b)))); };
+      const diff = B.vouchers - N.vouchers;
+      const lines = [];
+      if (diff < 0) lines.push(h('div', { class: 'callout warn' }, UI.icon('alert', 16), h('span', null, h('b', null, num(-diff) + ' voucher' + (diff === -1 ? '' : 's') + ' entered after this backup will disappear.'), ' Everything done after ' + RW.fmtDateTime(file.createdAt) + ' is not in this file.')));
+      else if (diff > 0) lines.push(h('div', { class: 'callout info' }, UI.icon('info', 16), h('span', null, num(diff) + ' voucher' + (diff === 1 ? '' : 's') + ' that are missing now will be brought back.')));
+      else lines.push(h('div', { class: 'callout info' }, UI.icon('info', 16), h('span', null, 'Same number of vouchers as now. Any edits made after this backup will be undone.')));
+      lines.push(h('div', { class: 'callout info' }, UI.icon('key', 16), h('span', null, 'Users and passwords become the ones saved in the backup. If your own account is not in it, you will be signed out.')));
+      for (const w of chk.warnings) lines.push(h('div', { class: 'callout warn' }, UI.icon('alert', 16), h('span', null, w)));
+      const who = [file.company, file.createdBy ? 'saved by ' + file.createdBy : '', file.source === 'server-copy' ? '(a server copy)' : ''].filter(Boolean).join(' · ');
+      return h('div', { class: 'bkp-preview' },
+        h('div', { class: 'row sb', style: { flexWrap: 'wrap', gap: '8px' } }, h('div', null, h('b', null, 'Backup of ' + RW.fmtDateTime(file.createdAt)), h('div', { class: 'muted', style: { fontSize: '12.5px' } }, who + ' · ' + mb(f.size))),
+          UI.badge('File is whole and unchanged', 'green', 'check')),
+        h('table', { class: 'tbl bkp-cmp' }, h('thead', null, h('tr', null, h('th', null, ''), h('th', { class: 'num' }, 'Now'), h('th', { class: 'num' }, 'In this backup'))),
+          h('tbody', null, row('Vouchers', N.vouchers, B.vouchers), row('Users', N.users, B.users), row('Branches', N.branches, B.branches), row('Cash received (all time)', N.cashInPaise, B.cashInPaise, true), row('Cash paid (all time)', N.cashOutPaise, B.cashOutPaise, true),
+            h('tr', null, h('td', null, 'Latest voucher date'), h('td', { class: 'num' }, N.lastVoucherDate ? RW.fmtDate(N.lastVoucherDate) : '—'), h('td', { class: 'num' }, h('b', null, B.lastVoucherDate ? RW.fmtDate(B.lastVoucherDate) : '—'))))),
+        h('div', { class: 'muted', style: { fontSize: '12.5px' } }, photosInFile ? num(photosInFile) + ' photos are in this file and will be put back.' : 'No photos in this file — photos already stored are kept as they are.'),
+        ...lines,
+        h('div', null, h('button', { class: 'btn btn-danger', type: 'button', onclick: () => restoreDialog({
+          title: 'Restore backup of ' + RW.fmtDateTime(file.createdAt),
+          lines: [h('div', null, num(B.vouchers) + ' vouchers, ' + num(B.users) + ' users — instead of the ' + num(N.vouchers) + ' vouchers and ' + num(N.users) + ' users now.')],
+          run: (extra) => RW.api.call('backup.restore', Object.assign({ backup: file }, extra)),
+        }) }, UI.icon('history', 16), 'Restore this backup…')));
+    }
+
+    /* ------------------------------------------------- 3. copies the server keeps */
+    function copiesCard() {
+      if (!copies || !copies.supported) {
+        return card('Copies kept by the server', null, h('div', { class: 'callout info' }, UI.icon('info', 16), h('span', null, RW.api.kind === 'demo'
+          ? 'This is the demo: its data lives only in this browser, and nobody keeps copies for it. Download a backup file to be safe. The online/self-hosted version also keeps hourly and daily copies by itself.'
+          : 'This installation does not keep automatic copies. Download a backup file regularly.')));
+      }
+      const rows = copies.rows;
+      const list = h('div', { class: 'bkp-copies' });
+      if (!rows.length) list.appendChild(h('div', { class: 'muted', style: { padding: '8px 0' } }, 'No copies yet — the first one is made after the first change.'));
+      for (const c of rows) {
+        const k = KIND[c.kind] || [c.kind, c.full ? 'Full: ledger + photos' : 'Ledger only'];
+        const dl = h('button', { class: 'btn btn-ghost btn-sm', type: 'button' }, UI.icon('download', 14), 'Download');
+        dl.addEventListener('click', async () => {
+          dl.disabled = true; dl.classList.add('busy');
+          try { const r = await RW.api.call('backup.get', { id: c.id }); const blob = new Blob([JSON.stringify(r.file)], { type: 'application/json' }); UI.download(blob, r.name, 'application/json'); UI.toast('Saved as ' + r.name, 'success'); }
+          catch (e) { UI.toast(UI.errMsg(e), 'error'); } finally { dl.disabled = false; dl.classList.remove('busy'); }
+        });
+        const rs = h('button', { class: 'btn btn-ghost btn-sm', type: 'button', style: { color: 'var(--bad)' }, onclick: () => restoreDialog({
+          title: 'Restore the copy of ' + RW.fmtDateTime(c.at),
+          lines: [h('div', null, k[0] + ' — ' + RW.fmtDateTime(c.at) + (c.full ? '' : '. This copy has the ledger only; photos stay as they are now.'))],
+          run: (extra) => RW.api.call('backup.restoreCopy', Object.assign({ id: c.id }, extra)),
+        }) }, UI.icon('history', 14), 'Restore…');
+        list.appendChild(h('div', { class: 'bkp-copy' },
+          h('div', { class: 'bkp-copy-t' }, h('b', null, RW.fmtDateTime(c.at)), h('span', { class: 'muted' }, RW.timeAgo(c.at)), h('span', { class: 'bkp-copy-k' }, k[0] + ' · ' + k[1] + (c.full && c.photos ? ' (' + num(c.photos) + ' photos)' : '') + ' · ' + mb(c.bytes))),
+          h('div', { class: 'row', style: { gap: '6px', flex: 'none' } }, dl, rs)));
+      }
+      return card('Copies kept by the server', 'Made automatically — hourly, daily, and just before anything is erased', list,
+        h('div', { class: 'callout warn' }, UI.icon('alert', 16), h('span', null, h('b', null, 'These copies sit on the same disk as your data.'), ' If the whole server or its disk is lost, they are lost with it. That is why you should also download a backup file now and then and keep it somewhere else.')));
+    }
+
+    // The restore card is built once: a colleague's voucher arriving by live sync must not wipe a file you are looking at.
+    let restoreEl = null;
+    function paint() {
+      if (!restoreEl) restoreEl = restoreCard();
+      UI.mount(host, h('div', { class: 'stack' }, downloadCard(), restoreEl, copiesCard()));
+    }
+
+    try { await load(); } catch (e) { if (!dead) UI.mount(host, V.errorCard(e, () => load())); }
+    const again = UI.debounce(() => { if (!dead) load().catch(() => {}); }, 1500);
+    const off = app.live(again);
+    return { dispose() { dead = true; if (off) off(); } };
+  }, { roles: ['SUPER_ADMIN'] });
 })(typeof window !== 'undefined' ? window : globalThis);
 
 </script>
@@ -11060,6 +11648,7 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
     { id: 'attachments', label: 'Attachments', icon: 'clip', href: '#/attachments' },
     { id: 'audit', label: 'Audit', icon: 'shield', href: '#/audit' },
     { id: 'notifications', label: 'Notifications', icon: 'bell', href: '#/notifications', badge: true },
+    { id: 'backup', label: 'Backup', icon: 'cloudup', href: '#/backup', need: 'super' },
     { id: 'settings', label: 'Settings', icon: 'settings', href: '#/settings', need: 'super' },
   ];
   const NAV_CEO = [

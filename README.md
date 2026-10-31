@@ -80,6 +80,20 @@ users/branches lose access immediately.
 
 * **Company logo** — the Ravi water flow PUMP logo (`app/img/logo.jpg`, `logo-mark.jpg`) is on the voucher (screen, print and PDF), on every statement / report PDF,
   on the sign-in page, in the menu and in the phone-app icon. To change it, replace those two files (white background, JPEG) and the icons in `app/icons/`.
+* **Backup & Restore** (new in 5.4, main admin only — menu *Backup*):
+  * **Download backup file** — one `.json` file with everything: branches, users (their password *hashes*, never the passwords), vouchers, registers, statements, outstanding, tours, notifications, the audit trail, settings
+    and, if ticked, the receipt and meeting photos. Save it in Google Drive, your email or a pen drive. The file is sealed with a checksum, so a damaged or hand-edited file is refused. **Keep it private.**
+  * **Restore from a file** — choose the file and you first *see* what is in it next to what the system holds now (vouchers, users, cash in/out, latest date; "615 vouchers that are missing now will be brought back").
+    Restoring asks for your **password again** and the word **RESTORE** (wrong passwords lock it for a few minutes), offers to **download your current data first**, and on a server it also keeps a full copy of what is there
+    (`backups/before-restore-…`). Voucher numbers never go backwards (a number already given out is not given out again) and people who are signed in stay signed in. Users and passwords become the ones in the backup.
+    The audit trail records *who restored what, when and why*; the CEO gets a notification.
+  * **Reminder** — the main admin's dashboard shows "Time to take a backup" when the last backup is older than the chosen days (Never / every day / 3 days / week / 15 days / month; default a week), with a one-tap download.
+  * **Clear all data** and **Reset** offer to download a backup file first (ticked by default).
+  * **Copies the server keeps by itself** (self-hosted/online edition; listed on the Backup page, each one can be downloaded or restored without any file):
+    the hourly rolling copy of the ledger, **one full copy a day** (ledger + photos) for 14 days, and **a full copy just before anything is erased for good** (vouchers, users, branches, outstanding entries — kept 30, not repeated
+    within 5 minutes), before *Clear all data*, and before every restore. Full copies are hard links, so they cost almost no extra disk and survive the erase itself.
+  * **Honest limit:** those copies sit on the same disk as the data. If the server's disk itself is lost (for example a free hosting plan without a permanent disk, or a deleted service), they go with it — a downloaded file kept
+    elsewhere is the real insurance. A restore accepts a file up to 100 MB; for more photos than that, take the backup without photos (photos are never deleted by a restore).
 * **Branch-wise books and the branch's own sign-in** (new in 5.3):
   * **Dashboard of the main admin / CEO** — a row of buttons *Main · Indore · Nagpur · … · All together* chooses whose books are shown. The cards, the charts, the recent vouchers and the outstanding total then belong to
     **that branch only** (Main shows only the Main branch's cash — the other branches are no longer mixed in). The choice is remembered on that device. *All together* is the whole company.
@@ -172,10 +186,11 @@ users/branches lose access immediately.
 
 ### Data and backups
 Everything is stored in `DATA_DIR` (default `./data`): the database file, the receipt photos (`kv/`) and a `backups/` folder
-(rotating hourly copies, plus a `before-clear-…` folder every time someone uses *Clear all data* — delete those yourself when you no longer need them).
+(rotating hourly copies; full folders `daily-…` (14 kept), `before-erase-…` (30 kept), `before-restore-…` (20 kept) and a `before-clear-…` folder every time someone uses *Clear all data* — delete the last kind yourself when you no longer need it).
 Writes are atomic (temp file + fsync + rename) and a lock file stops a second server from using the same folder.
-**Back up by copying the folder** (or just `backups/`) to another disk or cloud storage regularly.
-Restore = stop the server, put the files back, start it.
+**Easiest:** sign in as the main admin → **Backup** → *Download backup file*, and restore from the same page (no need to touch the folders).
+The server also keeps its own copies there (hourly, daily, and before anything is erased for good) — see *Backup & Restore* in the feature map.
+**Or copy the folder** (or just `backups/`) to another disk or cloud storage regularly. Restore by folder = stop the server, put the files back, start it.
 
 ### Environment variables
 
@@ -259,7 +274,7 @@ Copy the new files over, run `npm run build` (this stamps a new version so insta
 ## 5. Tests
 
 ```bash
-npm test          # 93 tests: business rules, HTTP server, storage, exports, live location, static-app integrity
+npm test          # 106 tests: business rules, HTTP server, storage, exports, live location, static-app integrity
 npm run test:db   # database tests on a throw-away local PostgreSQL (needs postgres 15/16 server binaries)
 ```
 

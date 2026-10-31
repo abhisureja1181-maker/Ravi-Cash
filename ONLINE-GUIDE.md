@@ -67,8 +67,11 @@ password chunein → Chrome menu (⋮) me **Install app / Add to Home screen**.
 * **Naya version lagana:** nayi zip `scp` se bhejein, `unzip -o`, phir `docker compose up -d --build`. Data surakshit rehta hai.
 
 ## Backup (zaroori)
-App khud rotating backup `data` ke andar rakhti hai, par wo usi server par hota hai — server kharab hua to wo bhi jayega. Isliye
-hafte me ek baar ye karein (server par):
+**Sabse aasan:** Super Admin se sign in → menu **Backup → Download backup file** (ek `.json` file). Use Google Drive / email me rakhein.
+Galti se data erase ho jaye to usi page par **Restore from a backup file** se wapas laa sakte hain (password + `RESTORE` likhna padta hai).
+App khud bhi roz ek poori copy, har ghante ledger ki copy, aur har permanent delete / Clear all se pehle ek copy `data/backups` me rakhti hai
+(Backup page par list me dikhti hain, wahin se Download / Restore). Par wo usi server par hoti hain — server kharab hua to wo bhi jayengi.
+Isliye apni file bahar rakhein, aur chahein to hafte me ek baar ye bhi karein (server par, poora folder):
 ```
 docker run --rm -v ravicash_ravi-data:/data -v $(pwd):/backup alpine tar czf /backup/ravicash-backup-$(date +%F).tar.gz -C /data .
 ```

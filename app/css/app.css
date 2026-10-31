@@ -701,3 +701,24 @@ td .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; ma
 /* six shortcuts on a phone (Home, Vouchers, Tours, Cash, Statement, Profile) */
 @media (max-width: 720px) { .bnav.n6 a, .bnav.n6 button { font-size: 9.8px; letter-spacing: -.1px; gap: 2px; } .bnav.n6 svg { width: 20px; height: 20px; } }
 @media (max-width: 760px) { .kv { grid-template-columns: 112px minmax(0, 1fr); gap: 8px 12px; } .kv dd { overflow-wrap: anywhere; word-break: normal; } }
+
+/* ---- Backup & Restore page and the dashboard reminder */
+.backup-host:not(:empty) { margin-bottom: 16px; }
+.bkp-remind { align-items: center; gap: 14px; flex-wrap: wrap; }
+.bkp-remind > svg { flex: none; }
+.bkp-file { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; pointer-events: none; }
+.bkp-preview { display: flex; flex-direction: column; gap: 12px; padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-2); }
+.bkp-cmp { background: var(--surface); border-radius: 10px; overflow: hidden; }
+.bkp-cmp th, .bkp-cmp td { padding: 9px 12px; }
+.bkp-cmp td.num, .bkp-cmp th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.bkp-copies { display: flex; flex-direction: column; }
+.bkp-copy { display: flex; gap: 12px; align-items: center; justify-content: space-between; padding: 11px 0; border-top: 1px solid var(--line); }
+.bkp-copy:first-child { border-top: 0; padding-top: 0; }
+.bkp-copy-t { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; min-width: 0; }
+.bkp-copy-k { flex-basis: 100%; color: var(--ink-3); font-size: 12px; }
+@media (max-width: 720px) {
+  .bkp-copy { flex-direction: column; align-items: stretch; gap: 8px; }
+  .bkp-copy .row { justify-content: flex-start; }
+  .bkp-remind > div:last-child { width: 100%; }
+  .bkp-cmp th, .bkp-cmp td { padding: 8px 9px; font-size: 12.5px; }
+}

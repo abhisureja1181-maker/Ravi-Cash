@@ -216,13 +216,19 @@
       ? (demo ? 'The demo is replaced by fresh sample data.' : 'Branches, users and settings are removed too. Afterwards the site shows the first-time setup screen, where you create your company and Super Admin again.')
       : 'Branches, users and settings stay. Everyone remains signed in.';
     const backup = demo ? 'This is demo data kept only in this browser — no backup is made.' : 'Before anything is deleted, the server saves a full backup copy (database and receipt photos) in its data/backups folder.';
+    const cbFile = h('input', { type: 'checkbox', checked: true });
+    const fileOpt = demo && all ? null : h('label', { class: 'opt-row' }, cbFile, h('span', null, 'Download a backup file first (with photos)', h('small', null, 'Recommended. A file you can keep on your own phone or computer and restore later from Backup.')));
     UI.modal({ title: all ? (demo ? 'Reset the demo' : 'Reset entire system') : 'Clear all transactions', size: 'md', persistent: true,
       body: h('div', { class: 'stack', style: { gap: '14px' } }, sum, h('p', { class: 'muted', style: { margin: 0, fontSize: '13px' } }, note), options,
-        h('div', { class: 'callout info' }, UI.icon('shield', 16), h('span', null, backup)), fWhy, fPw, fPhrase),
+        h('div', { class: 'callout info' }, UI.icon('shield', 16), h('span', null, backup)), fileOpt, fWhy, fPw, fPhrase),
       actions: [{ label: 'Cancel' }, { label: all ? (demo ? 'Reset demo' : 'Erase everything') : 'Clear all transactions', kind: 'danger', icon: 'trash', keepOpen: true, onClick: async (m) => {
         UI.fieldError(fPw, ''); UI.fieldError(fPhrase, '');
         if (!pw.value) { UI.fieldError(fPw, 'Enter your password'); return false; }
         if (phrase.value.trim() !== 'DELETE ALL') { UI.fieldError(fPhrase, 'Type DELETE ALL exactly as shown'); return false; }
+        if (fileOpt && cbFile.checked) {
+          try { const b = await V.downloadBackup({ photos: true }); UI.toast('Backup file saved as ' + b.name, 'info', { ms: 7000 }); }
+          catch (e) { UI.toast('The backup file could not be saved, so nothing was deleted: ' + UI.errMsg(e), 'error', { ms: 9000 }); return false; }
+        }
         let r;
         try { r = await RW.api.call('system.clear', { scope, password: pw.value, confirm: phrase.value.trim(), reason: why.value, resetNumbers: cbNum.checked, resetOpening: cbOpen.checked, clearAudit: cbAudit.checked }); }
         catch (e) { if (/password|wrong/i.test(e.message || '')) { UI.fieldError(fPw, e.message); return false; } throw e; }
@@ -280,6 +286,9 @@
         h('label', { style: { display: 'flex', gap: '10px', alignItems: 'flex-start', fontSize: '13.5px' } }, locOn, h('span', null, h('b', null, 'Staff share their live location'), h('span', { class: 'muted' }, ' — Users and Branch Admins are asked once; while they are signed in and the app is open their position is sent about once a minute, and each tour meeting saves the place it was recorded from. Switch off to stop it for everybody.'))),
         h('div', { class: 'form-grid', style: { marginTop: '14px' } }, UI.field('Keep each day\'s route for (days)', keepDays, { hint: '7 to 90. Older routes are erased automatically.' }))),
       h('div', { class: 'card' }, h('div', { class: 'card-b stack', style: { gap: '12px' } }, UI.field('Reason', why, { optional: true }), h('div', null, h('button', { class: 'btn btn-primary btn-lg', type: 'button', onclick: (e) => save(e.currentTarget) }, UI.icon('check', 18), 'Save settings')))),
+      h('div', { class: 'card' }, h('div', { class: 'card-b row sb', style: { gap: '14px', flexWrap: 'wrap' } },
+        h('div', { style: { minWidth: 0, flex: '1 1 260px' } }, h('b', null, 'Backup & restore'), h('p', { class: 'muted', style: { margin: '4px 0 0', fontSize: '12.5px' } }, 'Save all your data as one file, restore it if anything is erased by mistake, and see the copies the server keeps by itself.')),
+        h('a', { class: 'btn btn-ghost', href: '#/backup', style: { flex: 'none' } }, UI.icon('cloudup', 16), 'Open Backup'))),
       h('div', { class: 'card danger-zone' }, h('div', { class: 'card-h' }, h('h3', null, 'Danger zone', h('small', null, 'Permanent — these cannot be undone'))),
         h('div', { class: 'card-b' },
           h('div', { class: 'danger-row' }, h('div', null, h('b', null, 'Clear all transactions'), h('p', { class: 'muted' }, 'Erases every voucher, receipt photo, statement, outstanding entry and notification, for all branches. Branches, users and settings stay. Needs your password.')),

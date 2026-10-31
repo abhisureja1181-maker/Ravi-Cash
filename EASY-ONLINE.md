@@ -60,8 +60,12 @@ Android phone par:
 ## Roz ka kaam / dhyan rakhne ki baatein
 * **Update lagana:** naya `ravi-cash-online-upload.zip` extract karke GitHub repo me wahi files dobara upload karein (Add file → Upload files, same naam overwrite ho jayenge)
   → Render apne aap naya version chala dega (kuch second ka break aata hai). Data surakshit rehta hai.
-* **Backup:** Render disk ka snapshot roz apne aap leta hai aur kam se kam 7 din rakhta hai (Render ki docs ke hisaab se). Uske upar apni taraf se
-  hafte me ek baar *All Vouchers → Excel / CSV* export karke PC par rakhein. App `data/backups` me bhi apni copy rakhti hai (wo bhi usi disk par hoti hai).
+* **Backup (sabse zaroori):** Super Admin se sign in karke menu **Backup → Download backup file** dabayein. Ek `.json` file download hogi (isme poora data hai) —
+  use Google Drive / email / pen drive me rakhein. Dashboard par har hafte yaad dilane wala "Time to take a backup" dikhta hai (Backup page par din badal sakte hain).
+  Galti se kuch erase ho jaye to **Backup → Restore from a backup file** se file chunein, dekhein ki usme kya hai, password + `RESTORE` likhkar wapas le aayein.
+  App apni taraf se bhi roz ek poori copy aur har permanent delete se pehle ek copy rakhti hai (Backup page par "Copies kept by the server" — wahin se Download / Restore).
+  Lekin wo copies usi disk par hoti hain, isliye apni file bhi bahar rakhein. Render ka disk snapshot alag se kam se kam 7 din rehta hai (Render ki docs ke hisaab se).
+  **Free plan par disk nahi hota** — wahan data redeploy par ja sakta hai, to downloaded file hi asli bachav hai.
 * **Dikkat:** Render me service → **Logs** dekhein; aur error text mujhe bhej dein.
 * **Password:** Super Admin ka password kisi ko na dein; staff ko sirf unka apna User account.
 

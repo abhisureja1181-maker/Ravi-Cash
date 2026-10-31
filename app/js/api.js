@@ -79,7 +79,7 @@
     async function call(method, params, o) {
       const token = (o && o.token === null) ? null : session.token;
       const ctl = new AbortController();
-      const timer = setTimeout(() => ctl.abort(), (method === 'vouchers.addAttachment' || method === 'vouchers.create') ? 120000 : 45000);
+      const timer = setTimeout(() => ctl.abort(), method.startsWith('backup.') ? 600000 : (method === 'vouchers.addAttachment' || method === 'vouchers.create') ? 120000 : 45000);
       let res, body;
       try {
         res = await fetch(base + '/call', { method: 'POST', signal: ctl.signal, credentials: 'omit', cache: 'no-store',
