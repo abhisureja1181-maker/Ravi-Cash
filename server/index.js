@@ -17,6 +17,10 @@
  *   PBKDF2_ITERATIONS=310000
  *   SETUP_KEY=secret     (online hosting) the first-time setup screen asks for this key, so nobody else can claim a fresh server
  *   MAP_TILE_URL=...     (optional) tile address of a map provider for the Live Map; default is OpenStreetMap
+ *   MAP_TILES_PROXY=0    (optional) do NOT fetch map tiles through this server (default: the server fetches and caches them, so the map
+ *                        works even where the browser does not send a Referer; see server/tiles.js)
+ *   MAP_CONTACT=...      (optional) e-mail or web address added to the User-Agent the server uses towards the tile provider
+ *   PUBLIC_URL=https://...  (optional) this site's public address, sent to the tile provider as the Referer
  *   SEED_DEMO=1          fill an EMPTY data directory with the demo company (for trying it out only)
  */
 const http = require('node:http');
@@ -25,6 +29,7 @@ const path = require('node:path');
 const zlib = require('node:zlib');
 const crypto = require('node:crypto');
 const { FileStorage } = require('./storage');
+const { createTiles } = require('./tiles');
 
 const ROOT = path.join(__dirname, '..');
 for (const f of ['util', 'store', 'server-core', 'server-vouchers', 'server-admin', 'server-erase', 'server-tours', 'server-location', 'server-backup', 'seed']) require(path.join(ROOT, 'app', 'js', f + '.js'));
@@ -38,6 +43,7 @@ const HOST = env.HOST || '0.0.0.0';
 const TILE_URL = String(env.MAP_TILE_URL || '').trim();
 let TILE_HOSTS = 'https://tile.openstreetmap.org https://*.tile.openstreetmap.org';
 if (TILE_URL) { try { TILE_HOSTS = new URL(TILE_URL.replace(/\{[a-z]\}/g, 'x')).origin; } catch (e) { console.error('MAP_TILE_URL is not a valid address; using OpenStreetMap'); } }
+const TILE_UPSTREAM = TILE_URL && /^https?:\/\//i.test(TILE_URL) ? TILE_URL : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 const DATA_DIR = env.DATA_DIR || path.join(ROOT, 'data');
 // Serve dist/ (built by `npm run build`, versioned for the installed app) unless app/ has newer files than dist/.
 function pickStatic() {
@@ -66,7 +72,11 @@ function createApp(opts) {
   // Permanent deletes (vouchers, users, branches) and backup restores also keep a full copy of what is there first.
   const beforeErase = async () => (typeof storage.safetyCopy === 'function' ? storage.safetyCopy('before-erase', { minGapMs: 5 * 60000, keep: 30 }) : null);
   const beforeRestore = async () => (typeof storage.snapshot === 'function' ? storage.snapshot('before-restore', { keep: 20 }) : null);
-  const server = RW.createServer({ storage, bus, hashIterations: opts.iterations || ITER, beforeWipe, beforeErase, beforeRestore, maxBackupMb: Math.floor(MAX_BACKUP_BODY / 1048576), setupKey: opts.setupKey !== undefined ? opts.setupKey : env.SETUP_KEY });
+  // Map tiles for the Live Map are fetched by this server and handed to the browser from the same address (see server/tiles.js).
+  const tilesOn = opts.mapProxy !== undefined ? !!opts.mapProxy : env.MAP_TILES_PROXY !== '0';
+  const tiles = tilesOn ? createTiles({ dir: opts.tilesDir || path.join(storage.dir || opts.dataDir || DATA_DIR, 'tiles'), upstream: opts.tileUpstream || TILE_UPSTREAM, ttlMs: opts.tileTtlMs,
+    threads: opts.tileThreads || parseInt(env.MAP_TILE_THREADS || '2', 10), contact: env.MAP_CONTACT, fetch: opts.tileFetch, log: (...a) => (opts.log || ((...x) => console.log(new Date().toISOString(), ...x)))(...a) }) : null;
+  const server = RW.createServer({ storage, bus, mapTiles: tiles, hashIterations: opts.iterations || ITER, beforeWipe, beforeErase, beforeRestore, maxBackupMb: Math.floor(MAX_BACKUP_BODY / 1048576), setupKey: opts.setupKey !== undefined ? opts.setupKey : env.SETUP_KEY });
   const staticDir = opts.staticDir || STATIC_DIR;
   const trustProxy = opts.trustProxy !== undefined ? opts.trustProxy : TRUST_PROXY;
   const log = opts.log || ((...a) => console.log(new Date().toISOString(), ...a));
@@ -156,6 +166,13 @@ function createApp(opts) {
       req.on('error', reject);
     });
   }
+  // This site's own address, told to the map provider as the Referer (it only wants to know which site the tiles are for).
+  function siteAddress(req) {
+    if (env.PUBLIC_URL) return String(env.PUBLIC_URL).replace(/\/*$/, '/');
+    const host = String((trustProxy && req.headers['x-forwarded-host']) || req.headers.host || 'localhost').split(',')[0].trim().slice(0, 100).replace(/[^A-Za-z0-9.:\-\[\]]/g, '');
+    const plain = /^(localhost|127\.|10\.|192\.168\.|\[|\d+\.\d+\.\d+\.\d+)/.test(host);
+    return (plain ? 'http' : 'https') + '://' + host + '/';
+  }
   const bearer = (req) => { const m = /^Bearer ([A-Za-z0-9_-]{16,200})$/.exec(req.headers.authorization || ''); return m ? m[1] : null; };
 
   /* ---- per-IP throttle for sign-in / setup (per-account lockout is inside the business logic) */
@@ -232,6 +249,10 @@ function createApp(opts) {
         if (req.method === 'OPTIONS') { res.writeHead(204, secHeaders(cors(req, {}) || {})); return res.end(); }
         return await handleEvents(req, res);
       }
+      if (p.startsWith('/tiles/')) {
+        if (!tiles) return text(res, 404, 'Not found');
+        return await tiles.handle(req, res, url, { text, secHeaders, ip: clientIp(req), referer: siteAddress(req) });
+      }
       if (p === '/api/health') { const s = await server.load(); return json(res, 200, { ok: true, rev: s.rev || 0, time: new Date().toISOString() }); }
       if (p === '/config.js') {
         // tells the web app to use this server instead of the in-browser demo
@@ -262,7 +283,7 @@ function createApp(opts) {
   };
 
   return {
-    server, storage, bus, httpServer, handler,
+    server, storage, bus, httpServer, handler, tiles,
     async listen(port, host) {
       await new Promise((resolve, reject) => { httpServer.once('error', reject); httpServer.listen(port, host, resolve); });
       if (autoEveryMs) { autoFirst = setTimeout(autoTick, 15000); autoFirst.unref(); autoTimer = setInterval(autoTick, autoEveryMs); autoTimer.unref(); }

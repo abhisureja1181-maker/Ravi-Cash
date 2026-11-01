@@ -106,7 +106,9 @@
       const [lab, tone] = ST[s.status];
       return h('div', { class: 'lm-pop' }, h('b', null, s.name), h('div', { class: 'muted' }, [s.designation, s.branchName].filter(Boolean).join(' · ')), h('div', null, UI.badge(lab, tone)),
         h('div', { class: 'lm-pop-s' }, statusText(s)), h('div', { class: 'lm-pop-l' }, doing(s)[0]),
-        sel === s.id ? null : h('div', { class: 'lm-pop-a' }, h('button', { class: 'btn btn-primary btn-sm', type: 'button', onclick: () => select(s.id) }, UI.icon('route', 14), 'Route & meetings')));
+        h('div', { class: 'lm-pop-a', style: { display: 'flex', gap: '8px', flexWrap: 'wrap' } },
+          sel === s.id ? null : h('button', { class: 'btn btn-primary btn-sm', type: 'button', onclick: () => select(s.id) }, UI.icon('route', 14), 'Route & meetings'),
+          s.pos ? h('a', { class: 'btn btn-ghost btn-sm', href: M.gmaps(s.pos.lat, s.pos.lng), target: '_blank', rel: 'noopener' }, UI.icon('pin', 14), 'Google Maps') : null));
     }
     function drawStaff(fit) {
       if (!map) return;

@@ -281,6 +281,7 @@
       beforeWipe: opts.beforeWipe || null,   // optional: a server with real storage makes a safety backup before "clear all data"
       beforeErase: opts.beforeErase || null,      // optional: ... and a (cheap, throttled) copy before any permanent delete of vouchers, users or branches
       beforeRestore: opts.beforeRestore || null,  // optional: ... and a full copy of what is there before a backup is restored over it
+      mapTiles: opts.mapTiles || null,            // optional: the server's own map-tile proxy (server/tiles.js); the browser demo has none
       maxBackupMb: opts.maxBackupMb || 0,         // the largest backup file this server accepts (0 = no limit, e.g. the browser demo)
     };
 

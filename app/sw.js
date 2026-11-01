@@ -29,6 +29,7 @@ self.addEventListener('fetch', (e) => {
   const url = new URL(req.url);
   if (url.origin !== location.origin) return; // never touch API / storage calls to other origins
   if (url.pathname.startsWith('/api/')) return; // business data and the live-sync stream: always straight to the network
+  if (url.pathname.startsWith('/tiles/')) return; // map tiles: the browser's own cache keeps them (the service-worker cache would grow without limit)
   if (url.pathname.endsWith('/config.js')) {
     e.respondWith(fetch(req).then((r) => { const copy = r.clone(); caches.open(VERSION).then((c) => c.put(req, copy)); return r; }).catch(() => caches.match(req)));
     return;

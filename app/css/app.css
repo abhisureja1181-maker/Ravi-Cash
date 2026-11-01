@@ -614,7 +614,10 @@ td .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; ma
 .rw-map { position: relative; isolation: isolate; background: var(--surface-3); overflow: hidden; }
 .rw-map.leaflet-container { font: inherit; }
 .rw-map .leaflet-popup-content { margin: 12px 14px; font-size: 13px; color: #14243A; }
-.map-offline-note { position: absolute; left: 10px; right: 10px; bottom: 26px; z-index: 600; display: flex; gap: 8px; align-items: center; justify-content: center; padding: 7px 10px; border-radius: 8px; font-size: 12px; background: var(--warn-soft); color: var(--warn); }
+.map-offline-note { position: absolute; left: 58px; right: 10px; top: 10px; z-index: 600; display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: center; padding: 10px 12px; border-radius: 10px; font-size: 12.5px; line-height: 1.4; background: var(--surface); border: 1px solid var(--warn); color: var(--ink); box-shadow: 0 6px 18px rgba(10,25,50,.18); }
+.map-offline-note > svg { color: var(--warn); flex: none; }
+.map-offline-note > span { flex: 1 1 200px; min-width: 0; }
+.map-offline-note > .btn { flex: none; }
 .map-offline-note[hidden] { display: none; }
 .map-msg { height: 100%; display: flex; flex-direction: column; gap: 6px; align-items: center; justify-content: center; text-align: center; color: var(--ink-3); padding: 20px; }
 :root[data-theme='dark'] .rw-map .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(.92) contrast(.9); }

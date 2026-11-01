@@ -128,7 +128,11 @@ users/branches lose access immediately.
   * **Fairness and privacy** — the first time, the person gets a plain notice (what is shared, who sees it, how long) and answers *Allow* or *Not now*; the browser then asks for its own permission. A **"Location on"** sign stays at the top of the phone while it is shared, and
     *Not now* or a blocked permission is not hidden: the admin sees "Location off". Positions are kept for **30 days** (7–90, *Settings → Live location*), where the main admin can also switch the whole feature **off**. Deleting a user, a branch or *Reset entire system* erases their locations too.
   * **Limits to know** — it is a web app, so it can only send the position **while the app is open and signed in** (about once a minute, sooner after moving 150 m); it cannot track a closed or locked phone — that needs a native Android app. A phone's GPS can be faked with a "mock location" app; the accuracy of each position is stored and a stale one is flagged.
-    The street background comes from OpenStreetMap and **needs internet** (and the browser must send the site's address as `Referer` — the server's `Referrer-Policy` is `strict-origin-when-cross-origin` for exactly this; with `no-referrer` OpenStreetMap shows "403 Access blocked" tiles) (the markers and routes stay correct without it, and a notice says so); OpenStreetMap's free servers are for light use only — for heavy use set your own tile server with `MAP_TILE_URL`. The map library (Leaflet 1.9.4, BSD-2) is shipped inside the app (`app/vendor/leaflet`).
+    **The street background (5.4.1)** comes from OpenStreetMap and **needs internet**. OpenStreetMap refuses ("403 Access blocked — tile usage policy") any request that arrives without the site's address as `Referer`, and a browser does not always send it
+    (a file opened from the computer, a privacy tool or antivirus, a preview window, some phones). So the **server fetches the tiles itself** (with a proper User-Agent and Referer) and hands them to the browser from the app's own address — `/tiles/{z}/{x}/{y}.png`, only for signed-in people (a key
+    that `map.config` gives out and that expires after 4–8 hours). It keeps what it fetched (memory + `DATA_DIR/tiles`, a week, at most ~4000 tiles), asks the provider for at most two tiles at a time, and never twice for the same tile, which keeps this a polite client of a free service.
+    If the server cannot get tiles, the browser tries the provider directly; if that fails too a panel says so with **Try again**, and the positions stay correct (every person's popup and detail card has *Open in Google Maps*). The server log says what the provider answered ("Map tiles: the map provider answered 403 …").
+    OpenStreetMap's free servers are for light use only — for heavy use set your own tile server with `MAP_TILE_URL` (its key then stays on the server). The Browser-only `Ravi-Cash-DEMO.html` has no server, so there the browser asks the provider directly (which fails when the file is opened from disk; use the online/server edition for the Live Map). The map library (Leaflet 1.9.4, BSD-2) is shipped inside the app (`app/vendor/leaflet`).
   * **Phone hardening (5.3)** — the app retries by itself when the first call after sign-in fails on a weak network (the chip shows *Connecting…*); an "Allow" answer that did not reach the server is sent again and also
     travels with the first position; the position is sent the moment the person leaves the app (another app, lock screen), so the admin sees where they were when it went quiet; the notice is shown only **after** the first
     password change. The **Profile** page of Users and Branch Admins has a *Live location* card: status, phone permission, when the last position reached the company, any error, a **Send my location now** button, and an optional
@@ -204,7 +208,10 @@ The server also keeps its own copies there (hourly, daily, and before anything i
 | `PBKDF2_ITERATIONS` | `310000` | password-hash cost |
 | `SETUP_KEY` | – | online hosting: the first-time setup screen asks for this key, so nobody else can claim a fresh server |
 | `RUN_AS_UID` | – | start as root, fix the data folder's owner, then continue as this user (set by the `Dockerfile`; hosts mount disks as root) |
-| `MAP_TILE_URL` | OpenStreetMap | street-map background for the Live Map, e.g. `https://tiles.example.com/{z}/{x}/{y}.png` (its host is added to the page's image policy automatically) |
+| `MAP_TILE_URL` | OpenStreetMap | street-map background for the Live Map, e.g. `https://tiles.example.com/{z}/{x}/{y}.png` (the server fetches from it; its host is also added to the page's image policy for the browser's direct fallback) |
+| `MAP_TILES_PROXY=0` | on | do not fetch map tiles through this server (the browser then asks the provider directly) |
+| `MAP_CONTACT` | – | e-mail or web address added to the User-Agent the server sends to the tile provider (OpenStreetMap likes to know whom to contact) |
+| `PUBLIC_URL` | from the request | this site's public address, sent to the tile provider as the Referer |
 | `SEED_DEMO=1` | off | fill an **empty** data folder with demo data (never touches existing data) |
 
 ### If the login screen says "Cannot reach the server"
@@ -274,7 +281,7 @@ Copy the new files over, run `npm run build` (this stamps a new version so insta
 ## 5. Tests
 
 ```bash
-npm test          # 106 tests: business rules, HTTP server, storage, exports, live location, static-app integrity
+npm test          # 113 tests: business rules, HTTP server, storage, exports, live location, static-app integrity
 npm run test:db   # database tests on a throw-away local PostgreSQL (needs postgres 15/16 server binaries)
 ```
 

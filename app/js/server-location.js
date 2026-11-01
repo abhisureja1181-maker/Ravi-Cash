@@ -63,6 +63,10 @@
     H.cleanFix = cleanFix;
 
     /* ------------------------------------------------------- phone → server */
+    /* Where the map background comes from. On a server: its own tile address plus a key that only signed-in people get
+     * (the server fetches the tiles; see server/tiles.js). In the browser demo there is no server, so the map asks the provider directly. */
+    def('map.config', {}, async () => (H.mapTiles ? { proxy: true, key: H.mapTiles.issueKey() } : { proxy: false }));
+
     def('location.config', { roles: TRACKED }, async (ctx) => {
       const doc = await readLoc(), rec = doc.users[ctx.user.id] || {};
       const c = settingsOf(ctx.state);
