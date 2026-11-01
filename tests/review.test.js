@@ -178,7 +178,8 @@ test('Cash Received: no number, no counter used, adds to the user cash, listed a
   assert.equal(detail.voucher.kind, 'RECEIVED');
 
   const ex = await s.call(sa, 'export.vouchers', { filters: { kind: 'RECEIVED', userId: v.userId } });
-  assert.ok(ex.rows.every((x) => x.type === 'Cash Received' && x.number === '—' && x.cashIn > 0));
+  assert.ok(ex.rows.every((x) => x.number === '—' && (x.type === 'Cash Received' ? x.cashIn > 0 : x.type === 'Transfer In' && x.transferIn > 0)));      // a received branch transfer is a Cash Received too, but not income
+  assert.ok(ex.rows.some((x) => x.type === 'Cash Received' && x.cashIn === 25000));
 
   const log = (await s.call(sa, 'audit.list', { filters: { q: 'Cash Received' } })).rows;
   assert.ok(log.some((a) => a.action === 'CREATE' && a.entityLabel === 'Cash Received' && a.new.receivedFrom === 'Ravi Sharma (Owner)'));

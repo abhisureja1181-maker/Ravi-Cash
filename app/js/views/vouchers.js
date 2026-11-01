@@ -9,7 +9,7 @@
   // Builds a filter bar + table + pager. `scope` = 'mine' | 'all'.
   function listPage(root, p, app, scope) {
     const all = scope === 'all';
-    const st = { page: 1, pageSize: 25, sort: 'date_desc', f: { status: '', type: '', kind: '', review: '', branchId: all ? (p.q.branch || '') : '', userId: '', from: '', to: '', q: '', minAmount: '', maxAmount: '' }, preset: 'all', busy: false };
+    const st = { page: 1, pageSize: 25, sort: 'date_desc', f: { status: '', type: '', kind: '', review: '', transfer: ['ANY', 'NONE', 'PENDING'].includes(p.q.transfer) ? p.q.transfer : '', branchId: all ? (p.q.branch || '') : '', userId: '', from: '', to: '', q: '', minAmount: '', maxAmount: '' }, preset: 'all', busy: false };
     if (p.q.type === 'PAYMENT' || p.q.type === 'RECEIPT') st.f.type = p.q.type;
     if (p.q.type === 'RECEIVED') { st.f.kind = 'RECEIVED'; }
     if (p.q.review === 'PENDING' || p.q.review === 'VALID' || p.q.review === 'INVALID') st.f.review = p.q.review;
@@ -19,6 +19,7 @@
     const mkInput = (type, attrs) => h('input', Object.assign({ type }, attrs || {}));
     const q = mkInput('search', { placeholder: 'Voucher no., party, amount, user…', autocomplete: 'off' });
     const type = UI.select([{ value: '', label: 'All types' }, { value: 'PAYMENT', label: 'Cash Payment' }, { value: 'RECEIPT', label: 'Cash Receipt' }, { value: 'RECEIVED', label: 'Cash Received' }], st.f.kind === 'RECEIVED' ? 'RECEIVED' : st.f.type);
+    const transfer = UI.select([{ value: '', label: 'Everything' }, { value: 'NONE', label: 'Without branch transfers' }, { value: 'ANY', label: 'Only branch transfers' }, { value: 'PENDING', label: 'Transfers on the way' }], st.f.transfer);
     const review = UI.select([{ value: '', label: 'All' }, { value: 'PENDING', label: 'To review' }, { value: 'VALID', label: 'Valid' }, { value: 'INVALID', label: 'Not valid' }], st.f.review);
     const status = UI.select([{ value: '', label: 'Active + Void' }, { value: 'ACTIVE', label: 'Active (locked)' }, { value: 'VOID', label: 'Voided' }].concat(app.isAdmin && all ? [{ value: 'DELETED', label: 'Deleted' }] : []), st.f.status);
     const branch = UI.select([{ value: '', label: 'All branches' }], st.f.branchId);
@@ -64,7 +65,7 @@
       const fReason = UI.field('Reason', reason);
       const phrase = h('input', { type: 'text', placeholder: 'DELETE ALL', autocomplete: 'off', autocapitalize: 'characters' });
       const fPhrase = UI.field('Type DELETE ALL to confirm', phrase);
-      const net = last.totals.netPaise;
+      const net = last.totals.movePaise !== undefined ? last.totals.movePaise : last.totals.netPaise;
       UI.modal({ title: 'Delete ' + n + ' voucher' + (n === 1 ? '' : 's') + ' permanently', size: 'sm',
         body: h('div', { class: 'stack', style: { gap: '12px' } },
           h('div', { class: 'confirm-body' }, h('div', { class: 'confirm-ic danger' }, UI.icon('trash', 22)), h('p', null, h('b', null, 'All ' + n + ' voucher' + (n === 1 ? '' : 's')), ' matching the current filters (every page, not only the ones you see) will be erased for good, with their receipt photos, and removed from every cash register (net effect on cash: ' + RW.fmtINR(Math.abs(net)) + (net < 0 ? ' more' : ' less') + '). Voucher numbers are not reused. A short summary stays in the audit log.')),
@@ -102,6 +103,7 @@
     const bar = h('div', { class: 'bar-filters' },
       UI.field('Search', q, { class: 'wide' }),
       UI.field('Type', type),
+      UI.field('Branch transfers', transfer),
       UI.field('Status', status),
       all ? UI.field('Audit review', review) : null,
       all && app.seesAll ? UI.field('Branch', branch) : null,
@@ -112,16 +114,16 @@
       h('button', { class: 'btn btn-ghost btn-sm', type: 'button', style: { height: '38px' }, onclick: reset }, UI.icon('x', 14), 'Clear'));
 
     const syncF = () => {
-      st.f.q = q.value.trim(); st.f.type = type.value === 'RECEIVED' ? '' : type.value; st.f.kind = type.value === 'RECEIVED' ? 'RECEIVED' : type.value === 'RECEIPT' ? 'VOUCHER' : ''; st.f.review = review.value; st.f.status = status.value; st.f.branchId = branch.value; st.f.userId = user.value;
+      st.f.q = q.value.trim(); st.f.type = type.value === 'RECEIVED' ? '' : type.value; st.f.kind = type.value === 'RECEIVED' ? 'RECEIVED' : type.value === 'RECEIPT' ? 'VOUCHER' : ''; st.f.review = review.value; st.f.transfer = transfer.value; st.f.status = status.value; st.f.branchId = branch.value; st.f.userId = user.value;
       st.f.from = from.value; st.f.to = to.value; st.f.minAmount = minA.value; st.f.maxAmount = maxA.value; st.sort = sort.value;
     };
     function reset() {
-      [q, from, to, minA, maxA].forEach((i) => { i.value = ''; }); type.value = ''; review.value = ''; status.value = ''; branch.value = ''; user.value = ''; sort.value = 'date_desc';
+      [q, from, to, minA, maxA].forEach((i) => { i.value = ''; }); type.value = ''; transfer.value = ''; review.value = ''; status.value = ''; branch.value = ''; user.value = ''; sort.value = 'date_desc';
       chips.set('all'); st.preset = 'all'; st.page = 1; load();
     }
     const refilter = UI.debounce(() => { st.page = 1; load(); }, 260);
     q.addEventListener('input', refilter);
-    [type, review, status, user, sort, minA, maxA].forEach((i) => i.addEventListener('change', () => { st.page = 1; load(); }));
+    [type, transfer, review, status, user, sort, minA, maxA].forEach((i) => i.addEventListener('change', () => { st.page = 1; load(); }));
     [from, to].forEach((i) => i.addEventListener('change', () => { chips.set('custom'); st.preset = 'custom'; st.page = 1; load(); }));
     branch.addEventListener('change', async () => { await fillUsers(); st.page = 1; load(); });
 
@@ -147,6 +149,7 @@
           h('span', { class: 'amt-in' }, 'In ', h('b', null, RW.fmtINR(r.totals.inPaise))),
           h('span', { class: 'amt-out' }, 'Out ', h('b', null, RW.fmtINR(r.totals.outPaise))),
           h('span', null, 'Net ', h('b', { class: r.totals.netPaise < 0 ? 'neg' : '' }, RW.fmtINR(r.totals.netPaise))),
+          r.totals.xInPaise || r.totals.xOutPaise ? h('span', { class: 'amt-xfer', title: 'Money moved between branches: not counted as income or expense' }, UI.icon('swap', 13), ' Transfers in ', h('b', null, RW.fmtINR(r.totals.xInPaise)), ' · out ', h('b', null, RW.fmtINR(r.totals.xOutPaise))) : null,
           r.totals.notValidCount ? h('span', { class: 'sub bad', title: 'Marked not valid in the audit review — shown, but not counted as expense' }, UI.icon('ban', 13), ' ' + RW.fmtINR(r.totals.notValidPaise) + ' not counted (' + r.totals.notValidCount + ' not valid)') : null);
         if (sel) { for (const id of Array.from(sel.map.keys())) if (!r.rows.some((v) => v.id === id)) sel.map.delete(id); sel.map.forEach((_, id) => sel.map.set(id, r.rows.find((v) => v.id === id))); }
         UI.mount(body, r.rows.length
@@ -183,7 +186,7 @@
         const period = (st.f.from ? RW.fmtDate(st.f.from) : 'Beginning') + ' to ' + (st.f.to ? RW.fmtDate(st.f.to) : RW.fmtDate(app.today));
         if (kind === 'csv') UI.download(RW.buildCsv(RW.VOUCHER_COLUMNS, r.rows), 'vouchers-' + stamp + '.csv', 'text/csv;charset=utf-8');
         else if (kind === 'xlsx') {
-          UI.download(await RW.buildXlsx([{ name: 'Vouchers', title: 'Voucher Register — Ravi Water Flow Pump', subtitle: ['Scope: ' + scopeName, 'Period: ' + period, 'Generated by ' + r.generatedBy + ' on ' + RW.fmtDateTime(r.generatedAt)], columns: RW.VOUCHER_COLUMNS, rows: r.rows, totals: { label: 'TOTAL', sum: ['cashIn', 'cashOut'] } }]),
+          UI.download(await RW.buildXlsx([{ name: 'Vouchers', title: 'Voucher Register — Ravi Water Flow Pump', subtitle: ['Scope: ' + scopeName, 'Period: ' + period, 'Generated by ' + r.generatedBy + ' on ' + RW.fmtDateTime(r.generatedAt)], columns: RW.VOUCHER_COLUMNS, rows: r.rows, totals: { label: 'TOTAL', sum: ['cashIn', 'cashOut', 'transferIn', 'transferOut'] } }]),
             'vouchers-' + stamp + '.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         } else {
           await RW.loadFonts();
@@ -191,9 +194,9 @@
           UI.download(await RW.buildTableDoc({
             title: 'Voucher Register', subtitle: 'Filters applied', landscape: true, company: app.settings.company,
             identity: [{ label: 'Scope', value: scopeName }, { label: 'Period', value: period }, { label: 'Generated for', value: app.user.fullName, sub: UI.roleName(app.user.role) }],
-            cards: [{ label: 'Entries counted', value: String(r.totals.count) + (r.totals.notValidCount ? ' (+' + r.totals.notValidCount + ' not valid)' : '') }, { label: 'Cash Inflow', value: '₹' + m(r.totals.inPaise), tone: 'in' }, { label: 'Cash Outflow', value: '₹' + m(r.totals.outPaise), tone: 'out' }, { label: 'Net', value: '₹' + m(r.totals.netPaise), tone: 'accent' }],
-            columns: [{ label: 'Voucher No.', w: 24 }, { label: 'Date', w: 22 }, { label: 'Branch', w: 34, wrap: true }, { label: 'User', w: 30, wrap: true }, { label: 'Party', w: 52, wrap: true }, { label: 'Particulars', w: 74, wrap: true }, { label: 'Cash In (₹)', w: 26, align: 'right' }, { label: 'Cash Out (₹)', w: 26, align: 'right' }, { label: 'Status', w: 16 }, { label: 'Audit review', w: 20 }],
-            rows: r.rows.map((v) => ({ cells: [v.number, RW.fmtDate(v.date), v.branchCode ? v.branchCode.charAt(0) + v.branchCode.slice(1).toLowerCase() : v.branch, v.user, v.party, v.particulars, v.cashIn ? RW.fmtINR2(Math.round(v.cashIn * 100), { symbol: false }) : '', v.cashOut ? RW.fmtINR2(Math.round(v.cashOut * 100), { symbol: false }) : '', v.status, v.review], colors: v.status === 'VOID' || v.review === 'Not valid' ? Array(10).fill('#98A4B3') : [null, null, null, null, null, null, RW.COLORS.inflow, RW.COLORS.outflow, null, null] })),
+            cards: [{ label: 'Entries counted', value: String(r.totals.count) + (r.totals.notValidCount ? ' (+' + r.totals.notValidCount + ' not valid)' : '') }, { label: 'Cash Inflow', value: '₹' + m(r.totals.inPaise), tone: 'in' }, { label: 'Cash Outflow', value: '₹' + m(r.totals.outPaise), tone: 'out' }, { label: 'Net', value: '₹' + m(r.totals.netPaise), tone: 'accent' }].concat(r.totals.xInPaise || r.totals.xOutPaise ? [{ label: 'Transfers in / out (not counted)', value: '₹' + m(r.totals.xInPaise) + ' / ₹' + m(r.totals.xOutPaise) }] : []),
+            columns: [{ label: 'Voucher No.', w: 24 }, { label: 'Date', w: 22 }, { label: 'Branch', w: 34, wrap: true }, { label: 'User', w: 30, wrap: true }, { label: 'Party', w: 52, wrap: true }, { label: 'Particulars', w: 56, wrap: true }, { label: 'Cash In (₹)', w: 26, align: 'right' }, { label: 'Cash Out (₹)', w: 26, align: 'right' }, { label: 'Transfer (₹)', w: 26, align: 'right' }, { label: 'Status', w: 16 }, { label: 'Audit review', w: 20 }],
+            rows: r.rows.map((v) => ({ cells: [v.number, RW.fmtDate(v.date), v.branchCode ? v.branchCode.charAt(0) + v.branchCode.slice(1).toLowerCase() : v.branch, v.user, v.party, v.particulars, v.cashIn ? RW.fmtINR2(Math.round(v.cashIn * 100), { symbol: false }) : '', v.cashOut ? RW.fmtINR2(Math.round(v.cashOut * 100), { symbol: false }) : '', v.transferIn ? '+ ' + RW.fmtINR2(Math.round(v.transferIn * 100), { symbol: false }) : v.transferOut ? '− ' + RW.fmtINR2(Math.round(v.transferOut * 100), { symbol: false }) : '', v.status, v.review], colors: v.status === 'VOID' || v.review === 'Not valid' ? Array(11).fill('#98A4B3') : [null, null, null, null, null, null, RW.COLORS.inflow, RW.COLORS.outflow, null, null, null] })),
             generatedBy: r.generatedBy, generatedAt: r.generatedAt, branchName: app.branch.name,
           }), 'vouchers-' + stamp + '.pdf', 'application/pdf');
         }

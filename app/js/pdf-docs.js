@@ -208,11 +208,11 @@
   RW.buildStatementPdf = async function (st) {
     const m = (p) => RW.fmtINR2(p, { symbol: false });
     const money = (p) => (p ? m(p) : '');
-    const typeName = (t, kind) => (kind === 'RECEIVED' ? 'Cash Received' : t === 'PAYMENT' ? 'Cash Payment' : 'Cash Receipt');
+    const typeName = (t, kind, tr) => (tr ? (t === 'PAYMENT' ? 'Transfer Out' : 'Transfer In') : kind === 'RECEIVED' ? 'Cash Received' : t === 'PAYMENT' ? 'Cash Payment' : 'Cash Receipt');
     const rows = [{ cells: [RW.fmtDate(st.from), '', '', '', 'Opening Balance — cash brought forward', '', '', m(st.openingPaise)], bold: true, fill: '#EAF0F7' }];
     for (const r of st.rows) rows.push({
       // a payment marked "Not valid" in the audit review is listed but not counted
-      cells: [RW.fmtDate(r.date), r.number || '—', typeName(r.type, r.kind), r.partyName, r.particulars, money(r.inPaise), r.notValid ? 'Not valid' : money(r.outPaise), m(r.balancePaise)],
+      cells: [RW.fmtDate(r.date), r.number || '—', typeName(r.type, r.kind, r.transfer), r.partyName, r.particulars, money(r.inPaise), r.notValid ? 'Not valid' : money(r.outPaise), m(r.balancePaise)],
       colors: [null, null, null, null, null, RW.COLORS.inflow, r.notValid ? RW.COLORS.gray || null : RW.COLORS.outflow, null],
     });
     rows.push({ cells: [RW.fmtDate(st.to), '', '', '', 'Closing Balance — total ' + st.count + ' entr' + (st.count === 1 ? 'y' : 'ies') + (st.notValidCount ? ' (+' + st.notValidCount + ' not valid, not counted)' : ''), m(st.inPaise), m(st.outPaise), m(st.closingPaise)], bold: true, fill: '#EAF0F7' });
@@ -236,7 +236,7 @@
         { label: 'Cash In (₹)', w: 26, align: 'right' }, { label: 'Cash Out (₹)', w: 26, align: 'right' }, { label: 'Balance (₹)', w: 28, align: 'right' },
       ],
       rows,
-      note: st.voidedCount ? st.voidedCount + ' voided voucher' + (st.voidedCount > 1 ? 's' : '') + ' in this period are excluded from the totals.' : '',
+      note: [st.voidedCount ? st.voidedCount + ' voided voucher' + (st.voidedCount > 1 ? 's' : '') + ' in this period are excluded from the totals.' : '', st.xInPaise || st.xOutPaise ? 'Cash In / Out above include money moved between branches (transfers received ₹' + m(st.xInPaise) + ', sent ₹' + m(st.xOutPaise) + '). Transfers are not income or expense.' : ''].filter(Boolean).join(' '),
       generatedBy: st.generatedBy.fullName, generatedAt: st.generatedAt, branchName: st.generatedByBranch,
     };
     return RW.buildTableDoc(spec);

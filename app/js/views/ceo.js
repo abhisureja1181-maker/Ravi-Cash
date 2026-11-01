@@ -83,9 +83,9 @@
 
     function fillKpis(d) {
       const k = d.kpis, days = d.range.days, pv = k.prev;
-      K.cash.set(k.cashInHandPaise, k.activeBranches + ' active branches · ' + k.activeUsers + ' users', d.charts.balanceTrend30.map((x) => x.balancePaise));
-      K.in.set(k.inPaise, [pv && pctText(pv.inPct, days) || d.range.label, k.givenPaise ? RW.compactINR(k.givenPaise) + ' given to staff' : ''].filter(Boolean).join(' · '), d.charts.daily14.map((x) => x.inPaise));
-      K.out.set(k.outPaise, pv && pctText(pv.outPct, days) || d.range.label, d.charts.daily14.map((x) => x.outPaise));
+      K.cash.set(k.cashInHandPaise, [k.activeBranches + ' active branches · ' + k.activeUsers + ' users', k.transitPaise ? '+ ' + RW.compactINR(k.transitPaise) + ' on the way between branches' : ''].filter(Boolean).join(' · '), d.charts.balanceTrend30.map((x) => x.balancePaise));
+      K.in.set(k.inPaise, [pv && pctText(pv.inPct, days) || d.range.label, k.givenPaise ? RW.compactINR(k.givenPaise) + ' given to staff' : '', k.xInPaise ? RW.compactINR(k.xInPaise) + ' transfers not counted' : ''].filter(Boolean).join(' · '), d.charts.daily14.map((x) => x.inPaise));
+      K.out.set(k.outPaise, [pv && pctText(pv.outPct, days) || d.range.label, k.xOutPaise ? RW.compactINR(k.xOutPaise) + ' transfers not counted' : ''].filter(Boolean).join(' · '), d.charts.daily14.map((x) => x.outPaise));
       K.net.set(k.netPaise, d.range.label);
       K.cnt.set(k.count, pv && pctText(pv.countPct, days) || d.range.label);
       const r = d.review;

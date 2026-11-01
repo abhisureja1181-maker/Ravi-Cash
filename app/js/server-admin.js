@@ -24,8 +24,8 @@
         id: b.id, code: b.code, name: b.name, address: b.address, contact: b.contact, status: b.status, createdAt: b.createdAt,
         isMain: isMainBranch(s, b),
         userCount: s.users.filter((u) => u.branchId === b.id && !u.deleted && u.status === 'ACTIVE').length,
-        inPaise: t.inPaise, outPaise: t.outPaise, netPaise: t.netPaise, count: t.count,
-        balancePaise: opening + all.netPaise, openingPaise: opening,
+        inPaise: t.inPaise, outPaise: t.outPaise, netPaise: t.netPaise, xInPaise: t.xInPaise, xOutPaise: t.xOutPaise, count: t.count,
+        balancePaise: opening + all.movePaise, openingPaise: opening,
       };
     }
     H.branchStats = branchStats;
@@ -34,35 +34,37 @@
      * One pass over the vouchers. Whatever the listed users do not add up to (users removed earlier) is shown as one extra line so the totals always agree. */
     function booksFor(s, u, from, to, onlyBranchId) {
       const byUser = new Map(), allByUser = new Map();
+      // i / o = real cash in / out, xi / xo = transfers received / sent (kept apart, see addFlow in server-core)
+      const add = (a, v) => { if (v.type === 'RECEIPT') { if (v.transfer) a.xi += v.amountPaise; else a.i += v.amountPaise; } else if (v.transfer) a.xo += v.amountPaise; else a.o += v.amountPaise; };
       for (const v of s.vouchers) {
         if (!H.counted(v)) continue;
-        const a = allByUser.get(v.userId) || { i: 0, o: 0 };
-        if (v.type === 'RECEIPT') a.i += v.amountPaise; else a.o += v.amountPaise;
+        const a = allByUser.get(v.userId) || { i: 0, o: 0, xi: 0, xo: 0 };
+        add(a, v);
         allByUser.set(v.userId, a);
         if ((from && v.date < from) || (to && v.date > to)) continue;
-        const r = byUser.get(v.userId) || { i: 0, o: 0, n: 0 };
-        if (v.type === 'RECEIPT') r.i += v.amountPaise; else r.o += v.amountPaise;
+        const r = byUser.get(v.userId) || { i: 0, o: 0, xi: 0, xo: 0, n: 0 };
+        add(r, v);
         r.n++; byUser.set(v.userId, r);
       }
-      const total = { inPaise: 0, outPaise: 0, netPaise: 0, count: 0, balancePaise: 0, openingPaise: 0, userCount: 0 };
+      const total = { inPaise: 0, outPaise: 0, xInPaise: 0, xOutPaise: 0, netPaise: 0, count: 0, balancePaise: 0, openingPaise: 0, userCount: 0 };
       const rows = H.scopeBranches(s, u).filter((b) => !onlyBranchId || b.id === onlyBranchId).map((b) => {
         const st = branchStats(s, b, from, to);
         const users = s.users.filter((x) => !x.deleted && x.branchId === b.id && canSeeUser(u, x) && (H.registerOf(s, x.id) || allByUser.has(x.id)))
           .map((x) => {
-            const reg = H.registerOf(s, x.id), r = byUser.get(x.id) || { i: 0, o: 0, n: 0 }, a = allByUser.get(x.id) || { i: 0, o: 0 };
+            const reg = H.registerOf(s, x.id), r = byUser.get(x.id) || { i: 0, o: 0, xi: 0, xo: 0, n: 0 }, a = allByUser.get(x.id) || { i: 0, o: 0, xi: 0, xo: 0 };
             return { id: x.id, fullName: x.fullName, username: x.username, role: x.role, status: x.status, designation: x.designation || '', registerId: reg ? reg.id : null,
-              inPaise: r.i, outPaise: r.o, netPaise: r.i - r.o, count: r.n, openingPaise: reg ? reg.openingPaise : 0, balancePaise: (reg ? reg.openingPaise : 0) + a.i - a.o,
+              inPaise: r.i, outPaise: r.o, xInPaise: r.xi, xOutPaise: r.xo, netPaise: r.i - r.o, count: r.n, openingPaise: reg ? reg.openingPaise : 0, balancePaise: (reg ? reg.openingPaise : 0) + a.i - a.o + a.xi - a.xo,
               lastActivityAt: x.lastActivityAt || null };
           })
           .sort((x, y) => (x.role === 'BRANCH_ADMIN' ? 0 : 1) - (y.role === 'BRANCH_ADMIN' ? 0 : 1) || x.fullName.localeCompare(y.fullName));
         const sum = (k) => users.reduce((q, x) => q + x[k], 0);
-        const rest = { inPaise: st.inPaise - sum('inPaise'), outPaise: st.outPaise - sum('outPaise'), count: st.count - sum('count'), openingPaise: st.openingPaise - sum('openingPaise'), balancePaise: st.balancePaise - sum('balancePaise') };
-        if (rest.inPaise || rest.outPaise || rest.count || rest.balancePaise) {
+        const rest = { inPaise: st.inPaise - sum('inPaise'), outPaise: st.outPaise - sum('outPaise'), xInPaise: st.xInPaise - sum('xInPaise'), xOutPaise: st.xOutPaise - sum('xOutPaise'), count: st.count - sum('count'), openingPaise: st.openingPaise - sum('openingPaise'), balancePaise: st.balancePaise - sum('balancePaise') };
+        if (rest.inPaise || rest.outPaise || rest.xInPaise || rest.xOutPaise || rest.count || rest.balancePaise) {
           users.push({ id: '_former', fullName: 'Removed users', username: '', role: '', status: 'INACTIVE', designation: 'Earlier entries of users who were removed', registerId: null, former: true,
-            inPaise: rest.inPaise, outPaise: rest.outPaise, netPaise: rest.inPaise - rest.outPaise, count: rest.count, openingPaise: rest.openingPaise, balancePaise: rest.balancePaise, lastActivityAt: null });
+            inPaise: rest.inPaise, outPaise: rest.outPaise, xInPaise: rest.xInPaise, xOutPaise: rest.xOutPaise, netPaise: rest.inPaise - rest.outPaise, count: rest.count, openingPaise: rest.openingPaise, balancePaise: rest.balancePaise, lastActivityAt: null });
         }
-        total.inPaise += st.inPaise; total.outPaise += st.outPaise; total.count += st.count; total.balancePaise += st.balancePaise; total.openingPaise += st.openingPaise; total.userCount += st.userCount;
-        return { id: b.id, code: b.code, name: b.name, status: b.status, isMain: st.isMain, inPaise: st.inPaise, outPaise: st.outPaise, netPaise: st.netPaise, count: st.count,
+        total.inPaise += st.inPaise; total.outPaise += st.outPaise; total.xInPaise += st.xInPaise; total.xOutPaise += st.xOutPaise; total.count += st.count; total.balancePaise += st.balancePaise; total.openingPaise += st.openingPaise; total.userCount += st.userCount;
+        return { id: b.id, code: b.code, name: b.name, status: b.status, isMain: st.isMain, inPaise: st.inPaise, outPaise: st.outPaise, xInPaise: st.xInPaise, xOutPaise: st.xOutPaise, netPaise: st.netPaise, count: st.count,
           openingPaise: st.openingPaise, balancePaise: st.balancePaise, userCount: st.userCount, users };
       });
       total.netPaise = total.inPaise - total.outPaise;
@@ -204,7 +206,7 @@
         .map((u) => {
           const t = H.netFor(s, (v) => v.userId === u.id);
           const reg = H.registerOf(s, u.id);
-          return Object.assign(pubUser(s, u), { voucherCount: t.count, balancePaise: reg ? reg.openingPaise + t.netPaise : null, canManage: canManage(ctx.user, u) });
+          return Object.assign(pubUser(s, u), { voucherCount: t.count, balancePaise: reg ? reg.openingPaise + t.movePaise : null, canManage: canManage(ctx.user, u) });
         })
         .sort((a, b) => a.branchName.localeCompare(b.branchName) || a.fullName.localeCompare(b.fullName));
       return { rows };
@@ -609,16 +611,17 @@
       const m = new Map();
       for (const v of list) {
         if (!H.counted(v)) continue;
-        const r = m.get(v.date) || { inPaise: 0, outPaise: 0, count: 0 };
-        if (v.type === 'RECEIPT') r.inPaise += v.amountPaise; else r.outPaise += v.amountPaise;
+        const r = m.get(v.date) || { inPaise: 0, outPaise: 0, xInPaise: 0, xOutPaise: 0, count: 0 };
+        H.addFlow(r, v);
         r.count++; m.set(v.date, r);
       }
       return m;
     }
     function sumDays(m, from, to) {
-      let i = 0, o = 0, c = 0;
-      for (let d = from; d <= to; d = RW.addDays(d, 1)) { const r = m.get(d); if (r) { i += r.inPaise; o += r.outPaise; c += r.count; } }
-      return { inPaise: i, outPaise: o, netPaise: i - o, count: c };
+      const t = H.newFlow();
+      let c = 0;
+      for (let d = from; d <= to; d = RW.addDays(d, 1)) { const r = m.get(d); if (r) { t.inPaise += r.inPaise; t.outPaise += r.outPaise; t.xInPaise += r.xInPaise; t.xOutPaise += r.xOutPaise; c += r.count; } }
+      return Object.assign(t, { netPaise: H.flowNet(t), movePaise: H.flowMove(t), count: c });
     }
     function rangeParams(s, p) {
       const today = todayIst();
@@ -628,19 +631,19 @@
     }
     function seriesDaily(m, to, n) {
       const out = [];
-      for (let i = n - 1; i >= 0; i--) { const d = RW.addDays(to, -i); const r = m.get(d) || { inPaise: 0, outPaise: 0, count: 0 }; out.push({ date: d, label: RW.fmtDateShort(d), inPaise: r.inPaise, outPaise: r.outPaise, count: r.count }); }
+      for (let i = n - 1; i >= 0; i--) { const d = RW.addDays(to, -i); const r = m.get(d) || { inPaise: 0, outPaise: 0, xInPaise: 0, xOutPaise: 0, count: 0 }; out.push({ date: d, label: RW.fmtDateShort(d), inPaise: r.inPaise, outPaise: r.outPaise, xInPaise: r.xInPaise, xOutPaise: r.xOutPaise, count: r.count }); }
       return out;
     }
     function seriesWeekly(m, today, n) {
       const out = [];
       const start = RW.startOfWeek(today);
-      for (let i = n - 1; i >= 0; i--) { const f = RW.addDays(start, -7 * i); const t = RW.addDays(f, 6); const r = sumDays(m, f, t > today ? today : t); out.push({ date: f, label: RW.fmtDateShort(f), inPaise: r.inPaise, outPaise: r.outPaise, count: r.count }); }
+      for (let i = n - 1; i >= 0; i--) { const f = RW.addDays(start, -7 * i); const t = RW.addDays(f, 6); const r = sumDays(m, f, t > today ? today : t); out.push({ date: f, label: RW.fmtDateShort(f), inPaise: r.inPaise, outPaise: r.outPaise, xInPaise: r.xInPaise, xOutPaise: r.xOutPaise, count: r.count }); }
       return out;
     }
     function seriesMonthly(m, today, n) {
       const out = [];
       const start = RW.startOfMonth(today);
-      for (let i = n - 1; i >= 0; i--) { const f = RW.addMonths(start, -i); const t = RW.endOfMonth(f); const r = sumDays(m, f, t > today ? today : t); out.push({ date: f, label: RW.MONTHS[+f.slice(5, 7) - 1] + " '" + f.slice(2, 4), inPaise: r.inPaise, outPaise: r.outPaise, count: r.count }); }
+      for (let i = n - 1; i >= 0; i--) { const f = RW.addMonths(start, -i); const t = RW.endOfMonth(f); const r = sumDays(m, f, t > today ? today : t); out.push({ date: f, label: RW.MONTHS[+f.slice(5, 7) - 1] + " '" + f.slice(2, 4), inPaise: r.inPaise, outPaise: r.outPaise, xInPaise: r.xInPaise, xOutPaise: r.xOutPaise, count: r.count }); }
       return out;
     }
     function balanceTrend(s, u, list, today, n, branchId) {
@@ -655,9 +658,9 @@
       const first = RW.addDays(today, -(n - 1));
       let run = base;
       const before = [...m.entries()].filter(([d]) => d < first);
-      for (const [, r] of before) run += r.inPaise - r.outPaise;
+      for (const [, r] of before) run += r.inPaise - r.outPaise + r.xInPaise - r.xOutPaise;
       const out = [];
-      for (let i = 0; i < n; i++) { const d = RW.addDays(first, i); const r = m.get(d); if (r) run += r.inPaise - r.outPaise; out.push({ date: d, label: RW.fmtDateShort(d), balancePaise: run }); }
+      for (let i = 0; i < n; i++) { const d = RW.addDays(first, i); const r = m.get(d); if (r) run += r.inPaise - r.outPaise + r.xInPaise - r.xOutPaise; out.push({ date: d, label: RW.fmtDateShort(d), balancePaise: run }); }
       return out;
     }
     function scopeOpening(s, u, branchId) {
@@ -670,6 +673,20 @@
       }
       return a;
     }
+
+    /* Money that has been sent to another branch / person but not received yet ("on the way"), as far as this user may see it. */
+    function transitFor(s, u, scopeId) {
+      const lv = level(u);
+      const mine = H.transfersPending(s).filter((out) => {
+        const t = out.transfer;
+        if (lv === 'ALL') return !scopeId || out.branchId === scopeId || t.toBranchId === scopeId;
+        if (lv === 'BRANCH') return out.branchId === u.branchId || t.toBranchId === u.branchId;
+        return out.userId === u.id || (t.toBranchId === u.branchId && (!t.toUserId || t.toUserId === u.id));
+      }).sort((a, b) => (a.date === b.date ? b.seq - a.seq : a.date < b.date ? 1 : -1));
+      const view = (out) => ({ id: out.id, number: out.number, date: out.date, amountPaise: out.amountPaise, from: H.xferWho(s, out.branchId, out.userId), to: H.xferWho(s, out.transfer.toBranchId, out.transfer.toUserId), mineToReceive: out.transfer.toBranchId === u.branchId && (!out.transfer.toUserId || out.transfer.toUserId === u.id) && out.userId !== u.id, sentByMe: out.userId === u.id });
+      return { count: mine.length, paise: mine.reduce((a, v) => a + v.amountPaise, 0), items: mine.slice(0, 8).map(view) };
+    }
+    H.transitFor = transitFor;
 
     def('dashboard.get', {}, async (ctx, p) => {
       const s = ctx.state, u = ctx.user;
@@ -692,6 +709,7 @@
         const reg = H.registerOf(s, u.id);
         const bal = H.currentBalance(s, u.id);
         out.self = { registerId: reg ? reg.id : null, openingPaise: reg ? reg.openingPaise : 0, balancePaise: bal };
+        out.transit = transitFor(s, u, '');
         return out;
       }
       const kr = (p && p.range) || 'month';
@@ -701,11 +719,12 @@
       const activeUsers = s.users.filter((x) => !x.deleted && x.status === 'ACTIVE' && canSeeUser(u, x) && (!scopeId || x.branchId === scopeId)).length;
       out.kpiRange = { key: kr, label: range.label, from: range.from, to: range.to };
       out.kpis = Object.assign({}, k, {
-        balancePaise: scopeOpening(s, u, scopeId) + sumDays(m, '2000-01-01', today).netPaise,
+        balancePaise: scopeOpening(s, u, scopeId) + sumDays(m, '2000-01-01', today).movePaise,
         outstandingPaise: isAdmin(u) ? H.outstandingTotalFor(s, u, scopeId) : null,
         activeUsers, activeBranches: brs.filter((b) => b.status === 'ACTIVE').length,
       });
       out.branches = brs.map((b) => branchStats(s, b, range.from, range.to));
+      out.transit = transitFor(s, u, scopeId);
       out.scope = scopeId ? { branchId: scopeId, name: branchById(s, scopeId).name, isMain: isMainBranch(s, branchById(s, scopeId)) } : { branchId: '' };
       out.books = booksFor(s, u, range.from, range.to > today ? today : range.to, scopeId);
       if (isSuper(u) && H.backupStatus) out.backup = H.backupStatus(s);       // the "take a backup" reminder
@@ -726,7 +745,7 @@
       const money = (x) => RW.fmtINR2(x);
 
       // one pass over every voucher: period totals, previous period, per-branch, per-user, per-party
-      const blank = () => ({ inPaise: 0, outPaise: 0, givenPaise: 0, count: 0, notValidPaise: 0, notValidCount: 0 });
+      const blank = () => ({ inPaise: 0, outPaise: 0, xInPaise: 0, xOutPaise: 0, givenPaise: 0, count: 0, notValidPaise: 0, notValidCount: 0 });
       const cur = blank(), prev = blank();
       const perBranch = new Map(), perUser = new Map(), parties = new Map();
       const bOf = (id) => { let r = perBranch.get(id); if (!r) perBranch.set(id, r = Object.assign(blank(), { allNetPaise: 0, pendingCount: 0, pendingPaise: 0, oldestPendingDate: null, lastEntryAt: '', todayCount: 0 })); return r; };
@@ -751,8 +770,8 @@
           if (v.status === 'ACTIVE' && v.review === 'INVALID') { tot.notValidPaise += v.amountPaise; tot.notValidCount++; if (brk) { brk.notValidPaise += v.amountPaise; brk.notValidCount++; } }
           if (!live) continue;
           const tt = [tot].concat(brk ? [brk] : []);
-          for (const t of tt) { t.count++; if (v.type === 'RECEIPT') { t.inPaise += v.amountPaise; if (v.kind === 'RECEIVED') t.givenPaise += v.amountPaise; } else t.outPaise += v.amountPaise; }
-          if (tot === cur && v.type === 'PAYMENT') {
+          for (const t of tt) { t.count++; H.addFlow(t, v); if (v.type === 'RECEIPT' && v.kind === 'RECEIVED' && !v.transfer) t.givenPaise += v.amountPaise; }
+          if (tot === cur && v.type === 'PAYMENT' && !v.transfer) {
             us.outPaise += v.amountPaise; us.count++;
             const pk = (v.partyName || '').trim().toLowerCase();
             const pr = parties.get(pk) || { name: v.partyName, outPaise: 0, count: 0 }; pr.outPaise += v.amountPaise; pr.count++; parties.set(pk, pr);
@@ -792,7 +811,7 @@
         const bst = branchStats(s, b, from, to);
         return {
           id: b.id, code: b.code, name: b.name, status: b.status, activeUsers: bst.userCount, staff: activeStaff,
-          balancePaise: bst.balancePaise, inPaise: t.inPaise, outPaise: t.outPaise, netPaise: t.inPaise - t.outPaise, givenPaise: t.givenPaise, count: t.count,
+          balancePaise: bst.balancePaise, inPaise: t.inPaise, outPaise: t.outPaise, xInPaise: t.xInPaise, xOutPaise: t.xOutPaise, netPaise: t.inPaise - t.outPaise, givenPaise: t.givenPaise, count: t.count,
           pendingCount: t.pendingCount, pendingPaise: t.pendingPaise, notValidCount: t.notValidCount, notValidPaise: t.notValidPaise,
           overduePaise: overdueBy.get(b.id) || 0, lastEntryAt: t.lastEntryAt || null, todayCount: t.todayCount,
         };
@@ -850,14 +869,16 @@
         feed.push({ at: a.at, actorName: a.actorName, actorRole: a.actorRole, action: a.action, entity: a.entity, entityId: a.entityId, label: a.entityLabel, reason: a.reason || '', branchName: (branchById(s, a.branchId) || {}).name || '' });
       }
       const pct = (a, b) => (b > 0 ? Math.round(((a - b) / b) * 1000) / 10 : null);
+      const transit = transitFor(s, u, '');
       return {
         generatedAt: nowIso(), today, range: { key, label: rg.label, from, to, days }, prevRange: days ? { from: prevFrom, to: prevTo } : null,
         kpis: {
-          cashInHandPaise: cashInHand, inPaise: cur.inPaise, outPaise: cur.outPaise, netPaise: cur.inPaise - cur.outPaise, givenPaise: cur.givenPaise, count: cur.count,
+          cashInHandPaise: cashInHand, transitPaise: transit.paise, transitCount: transit.count, inPaise: cur.inPaise, outPaise: cur.outPaise, xInPaise: cur.xInPaise, xOutPaise: cur.xOutPaise, netPaise: cur.inPaise - cur.outPaise, givenPaise: cur.givenPaise, count: cur.count,
           notValidPaise: cur.notValidPaise, notValidCount: cur.notValidCount, outstanding: os.total, overdue: os.overdue,
           activeBranches: s.branches.filter((b) => b.status === 'ACTIVE').length, activeUsers: s.users.filter((x) => !x.deleted && x.status === 'ACTIVE').length,
           prev: days ? { inPaise: prev.inPaise, outPaise: prev.outPaise, count: prev.count, inPct: pct(cur.inPaise, prev.inPaise), outPct: pct(cur.outPaise, prev.outPaise), countPct: pct(cur.count, prev.count) } : null,
         },
+        transit,
         review: { pendingCount: pendingList.length, pendingPaise, oldestDate: oldestPending, oldestDays: oldestPending ? RW.diffDays(today, oldestPending) : 0 },
         branches, alerts,
         topParties: [...parties.values()].sort((a, b) => b.outPaise - a.outPaise).slice(0, 5),
@@ -888,7 +909,7 @@
           series.push({ date: f, label: RW.MONTHS[+f.slice(5, 7) - 1] + " '" + f.slice(2, 4), inPaise: x.inPaise, outPaise: x.outPaise, count: x.count });
         }
       }
-      return { range: r, inPaise: t.inPaise, outPaise: t.outPaise, netPaise: t.netPaise, count: t.count, series };
+      return { range: r, inPaise: t.inPaise, outPaise: t.outPaise, xInPaise: t.xInPaise, xOutPaise: t.xOutPaise, netPaise: t.netPaise, count: t.count, series };
     });
 
     def('reports.branches', { roles: ['SUPER_ADMIN', 'BRANCH_ADMIN', 'CEO', 'VIEWER'] }, async (ctx, p) => {
@@ -916,7 +937,7 @@
       const tt = totalsOf(list);
       const reg = H.registerOf(s, t.id);
       return {
-        range: r, user: pubUser(s, t), registerId: reg ? reg.id : null, count: tt.count, inPaise: tt.inPaise, outPaise: tt.outPaise, netPaise: tt.netPaise,
+        range: r, user: pubUser(s, t), registerId: reg ? reg.id : null, count: tt.count, inPaise: tt.inPaise, outPaise: tt.outPaise, xInPaise: tt.xInPaise, xOutPaise: tt.xOutPaise, netPaise: tt.netPaise,
         currentBalancePaise: reg ? H.currentBalance(s, t.id) : null, lastActivityAt: t.lastActivityAt || null,
         totalVouchersAll: s.vouchers.filter((v) => v.userId === t.id && H.counted(v)).length,
         rows: list.slice(0, 200).map((v) => vView(s, v)), truncated: list.length > 200,
@@ -951,8 +972,8 @@
       const rows = list.map((v) => {
         const x = vView(s, v);
         return {
-          number: x.number || '—', type: x.kind === 'RECEIVED' ? 'Cash Received' : x.type === 'PAYMENT' ? 'Cash Payment' : 'Cash Receipt', date: x.date, branch: x.branchName, user: x.userName, party: x.partyName,
-          particulars: x.particulars, branchCode: x.branchCode, amount: x.amount, cashIn: x.counted && x.type === 'RECEIPT' ? x.amount : null, cashOut: x.counted && x.type === 'PAYMENT' ? x.amount : null, amountInWords: x.amountInWords,
+          number: x.number || '—', type: x.transfer ? (x.type === 'PAYMENT' ? 'Transfer Out' : 'Transfer In') : x.kind === 'RECEIVED' ? 'Cash Received' : x.type === 'PAYMENT' ? 'Cash Payment' : 'Cash Receipt', date: x.date, branch: x.branchName, user: x.userName, party: x.partyName,
+          particulars: x.particulars, branchCode: x.branchCode, amount: x.amount, cashIn: x.counted && x.type === 'RECEIPT' && !x.transfer ? x.amount : null, cashOut: x.counted && x.type === 'PAYMENT' && !x.transfer ? x.amount : null, transferIn: x.counted && x.type === 'RECEIPT' && x.transfer ? x.amount : null, transferOut: x.counted && x.type === 'PAYMENT' && x.transfer ? x.amount : null, amountInWords: x.amountInWords,
           status: x.status, review: { VALID: 'Valid', INVALID: 'Not valid', PENDING: 'Not reviewed', NA: '' }[x.review] || '', reviewReason: x.reviewReason, createdAt: x.createdAt, createdBy: x.createdBy, attachments: x.attachmentCount,
         };
       });

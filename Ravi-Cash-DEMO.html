@@ -770,7 +770,7 @@ input, select, textarea { width: 100%; height: 42px; padding: 0 12px; border-rad
 textarea { height: auto; min-height: 96px; padding: 10px 12px; resize: vertical; line-height: 1.5; }
 select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2375839A' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px; }
 input:focus, select:focus, textarea:focus { border-color: var(--orange); box-shadow: var(--ring); }
-input[type=checkbox] { width: 17px; height: 17px; accent-color: var(--accent); padding: 0; }
+input[type=checkbox], input[type=radio] { width: 17px; height: 17px; accent-color: var(--accent); padding: 0; }
 input[type=file] { display: none; }
 input::placeholder, textarea::placeholder { color: var(--ink-3); }
 .input-ico { position: relative; }
@@ -921,7 +921,9 @@ input::placeholder, textarea::placeholder { color: var(--ink-3); }
 .badge { display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 8px; border-radius: 11px; font-size: 11px; font-weight: 700; letter-spacing: .04em; white-space: nowrap; }
 .badge-navy { background: var(--surface-3); color: var(--ink-2); } .badge-green { background: var(--ok-soft); color: var(--ok); } .badge-red { background: var(--bad-soft); color: var(--bad); } .badge-gray { background: var(--surface-3); color: var(--ink-3); } .badge-orange { background: var(--accent-soft); color: var(--accent-ink); } .badge-amber { background: var(--warn-soft); color: var(--warn); } .badge-blue { background: var(--in-soft); color: var(--in); }
 .type-pill { display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 8px 0 6px; border-radius: 11px; font-size: 11.5px; font-weight: 650; }
-.type-pill.in { background: var(--in-soft); color: var(--in); } .type-pill.out { background: var(--out-soft); color: var(--out); }
+.type-pill.in { background: var(--in-soft); color: var(--in); } .type-pill.out { background: var(--out-soft); color: var(--out); } .type-pill.xfer { background: var(--accent-soft); color: var(--accent-ink); }
+.amt-xfer { color: var(--accent-ink); font-weight: 650; }
+.xfer-note { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; color: var(--accent-ink); }
 .empty { text-align: center; padding: 44px 20px; color: var(--ink-3); }
 .empty-ic { width: 56px; height: 56px; border-radius: 16px; background: var(--surface-3); display: grid; place-items: center; margin: 0 auto 14px; color: var(--ink-3); }
 .empty h4 { color: var(--ink); font-size: 15px; margin-bottom: 4px; }
@@ -1350,7 +1352,7 @@ td .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; ma
 .scope-l { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 650; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); }
 .bk-card { overflow: hidden; }
 .bk { display: block; }
-.bk-head, .bk-row { display: grid; grid-template-columns: minmax(0, 1.8fr) repeat(4, minmax(0, 1fr)); gap: 6px 14px; align-items: center; padding: 10px 18px; }
+.bk-head, .bk-row { display: grid; grid-template-columns: minmax(0, 1.7fr) repeat(5, minmax(0, 1fr)); gap: 6px 14px; align-items: center; padding: 10px 18px; }
 .bk-head { font-size: 11px; letter-spacing: .07em; text-transform: uppercase; font-weight: 650; color: var(--ink-3); background: var(--surface-2); border-bottom: 1px solid var(--line); }
 .bk-row { border-top: 1px solid var(--line); font-size: 13px; }
 .bk-row.click { cursor: pointer; }
@@ -1375,6 +1377,7 @@ td .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; ma
   .bk-row > .bk-c { text-align: left; display: flex; flex-direction: column; gap: 1px; }
   .bk-row > .bk-c::before { content: attr(data-l); font-size: 10.5px; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
   .bk-row > .bk-c.hide-m { display: none; }
+  .bk-c .amt-xfer { white-space: nowrap; }
   .bk-user .bk-un { padding-left: 14px; }
   .bk-none { padding-left: 14px; }
 }
@@ -1406,6 +1409,18 @@ td .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; ma
   .bkp-remind > div:last-child { width: 100%; }
   .bkp-cmp th, .bkp-cmp td { padding: 8px 9px; font-size: 12.5px; }
 }
+
+/* branch transfers */
+.xfer-box { border: 1px solid var(--line-2); border-left: 4px solid var(--accent); border-radius: 10px; padding: 12px 14px; background: var(--surface-2); }
+.xfer-box .opt-row b { font-size: 13.5px; }
+.xfer-body { margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--line-2); }
+.xfer-pick { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); cursor: pointer; font-size: 13.5px; }
+.xfer-pick small { display: block; color: var(--ink-3); font-size: 12px; margin-top: 2px; }
+.xfer-pick input { margin-top: 3px; flex: none; }
+.xfer-pick.sel { border-color: var(--accent); background: var(--accent-soft); }
+.xfer-wait { color: var(--warn); }
+.xfer-strip { display: flex; flex-direction: column; gap: 6px; }
+.xfer-strip .xfer-item { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; padding: 8px 10px; border-radius: 8px; background: var(--surface-3); font-size: 13px; }
 
 </style>
   <style>
@@ -2022,7 +2037,35 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
     /* Review state shown to the client: payments are PENDING until an admin marks them; receipts / cash received are not reviewed. */
     const reviewOf = (v) => (v.type === 'PAYMENT' ? v.review || 'PENDING' : 'NA');
     const vlabel = (v) => v.number || 'Cash Received';
-    function vView(s, v) {
+
+    /* ---- transfers: who sent what to whom, and has it arrived? ---- */
+    // ids of the transfer-out vouchers that a (still counted) transfer-in voucher has received
+    function receivedIds(s) {
+      const set = new Set();
+      for (const x of s.vouchers) if (x.transfer && x.type === 'RECEIPT' && x.transfer.link && counted(x)) set.add(x.transfer.link);
+      return set;
+    }
+    // transfer-out vouchers that are counted, not marked "already received" and not received yet = money on the way
+    function transfersPending(s) {
+      const got = receivedIds(s);
+      return s.vouchers.filter((v) => v.transfer && v.type === 'PAYMENT' && counted(v) && !v.transfer.settled && !got.has(v.id));
+    }
+    const xferWho = (s, branchId, userId) => {
+      const b = branchById(s, branchId), w = userId ? userById(s, userId) : null;
+      return { branchId: branchId || '', branchName: b ? b.name : (branchId ? 'Removed branch' : ''), userId: w ? w.id : '', userName: w ? w.fullName : '' };
+    };
+    function transferView(s, v, got) {
+      const t = v.transfer;
+      if (!t) return null;
+      if (v.type === 'PAYMENT') {
+        const g = got || receivedIds(s);
+        const received = g.has(v.id);
+        return Object.assign({ dir: 'OUT' }, xferWho(s, t.toBranchId, t.toUserId), { settled: !!t.settled, received: received || !!t.settled, pending: counted(v) && !received && !t.settled });
+      }
+      const out = t.link ? s.vouchers.find((x) => x.id === t.link) : null;
+      return Object.assign({ dir: 'IN' }, xferWho(s, t.fromBranchId, t.fromUserId), { link: t.link || '', linkNumber: out ? out.number || '' : '' });
+    }
+    function vView(s, v, got) {
       const b = branchById(s, v.branchId);
       const u = userById(s, v.userId);
       const cb = userById(s, v.createdBy);
@@ -2039,6 +2082,7 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
         updatedBy: ub ? ub.fullName : '', voidReason: v.voidReason || '', version: v.version,
         review: reviewOf(v), counted: counted(v), reviewReason: v.reviewReason || '', reviewedAt: v.reviewedAt || null,
         reviewedBy: (userById(s, v.reviewedBy) || {}).fullName || '',
+        transfer: v.transfer ? transferView(s, v, got) : null,
       };
     }
 
@@ -2084,20 +2128,38 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
     }
 
     /* Balance of one register up to (and excluding) `before` (YYYY-MM-DD) or overall. */
+    /* BRANCH TRANSFERS. Money one branch (or person) sends to another is not income and not expense: it only moves cash from one register to
+     * another. A PAYMENT carrying `transfer` is "transfer out" ({ toBranchId, toUserId, settled }); a RECEIPT carrying `transfer` is "transfer in"
+     * ({ fromBranchId, fromUserId, link: the id of the transfer-out voucher }). Every total therefore has four money figures:
+     *   inPaise / outPaise      real cash in / out (what a branch earns and spends)
+     *   xInPaise / xOutPaise    transfers received / sent
+     *   netPaise                inPaise - outPaise  (the result of the business)
+     *   movePaise               netPaise + xInPaise - xOutPaise  (how much the cash actually changed; balance = opening + movePaise)
+     * addFlow() is the one place that decides which of the four a voucher belongs to. */
+    const newFlow = () => ({ inPaise: 0, outPaise: 0, xInPaise: 0, xOutPaise: 0 });
+    function addFlow(t, v) {
+      if (v.type === 'RECEIPT') { if (v.transfer) t.xInPaise += v.amountPaise; else t.inPaise += v.amountPaise; }
+      else if (v.transfer) t.xOutPaise += v.amountPaise; else t.outPaise += v.amountPaise;
+      return t;
+    }
+    const flowNet = (t) => t.inPaise - t.outPaise;
+    const flowMove = (t) => t.inPaise - t.outPaise + t.xInPaise - t.xOutPaise;
+    const moveOf = (v) => (v.type === 'RECEIPT' ? v.amountPaise : -v.amountPaise);       // what one counted voucher does to a register
     function netFor(s, predicate) {
-      let i = 0, o = 0, n = 0;
+      const t = newFlow();
+      let n = 0;
       for (const v of s.vouchers) {
         if (!counted(v) || !predicate(v)) continue;
         n++;
-        if (v.type === 'RECEIPT') i += v.amountPaise; else o += v.amountPaise;
+        addFlow(t, v);
       }
-      return { inPaise: i, outPaise: o, count: n, netPaise: i - o };
+      return Object.assign(t, { count: n, netPaise: flowNet(t), movePaise: flowMove(t) });
     }
     const registerOf = (s, userId) => s.registers.find((r) => r.userId === userId) || null;
     function currentBalance(s, userId) {
       const r = registerOf(s, userId);
       const t = netFor(s, (v) => v.userId === userId);
-      return (r ? r.openingPaise : 0) + t.netPaise;
+      return (r ? r.openingPaise : 0) + t.movePaise;
     }
 
     /* -------------------------------------------------------- authentication */
@@ -2147,7 +2209,7 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
     const H = {
       ApiError, def, M, storage, bus, iterations, clock, nowIso, todayIst, load, commit, emptyState, DEFAULT_SETTINGS,
       userById, branchById, isSuper, seesAll, isAdmin, level, requireRole, canSeeVoucher, canSeeUser, canSeeOwned, canAdminVoucher, scopeBranches,
-      pubUser, vView, counted, reviewOf, vlabel, audit, notify, checkPassword, makeCredentials, netFor, registerOf, currentBalance, authenticate,
+      pubUser, vView, counted, reviewOf, vlabel, audit, notify, checkPassword, makeCredentials, transfersPending, receivedIds, transferView, xferWho, netFor, newFlow, addFlow, flowNet, flowMove, moveOf, registerOf, currentBalance, authenticate,
       setupKey: String(opts.setupKey || '').trim(),   // optional: first-time setup on a public server needs this key
       beforeWipe: opts.beforeWipe || null,   // optional: a server with real storage makes a safety backup before "clear all data"
       beforeErase: opts.beforeErase || null,      // optional: ... and a (cheap, throttled) copy before any permanent delete of vouchers, users or branches
@@ -2337,6 +2399,7 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
       const maxP = f.maxAmount !== undefined && f.maxAmount !== '' && f.maxAmount !== null ? RW.toPaise(f.maxAmount) : null;
       const num = f.number ? String(f.number).trim().toLowerCase() : '';
       const out = [];
+      let got = null;
       for (const v of s.vouchers) {
         if (!canSeeVoucher(u, v)) continue;
         if (v.status === 'DELETED' && !(f.includeDeleted && isAdmin(u)) && f.status !== 'DELETED') continue;
@@ -2349,6 +2412,9 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
           // the review queue only holds payments that still count; PENDING = not reviewed yet
           if (f.review === 'PENDING' ? !(v.type === 'PAYMENT' && v.status === 'ACTIVE' && !v.review) : !(v.type === 'PAYMENT' && v.review === f.review)) continue;
         }
+        if (f.transfer) {       // 'ANY' = only branch transfers · 'NONE' = without them · 'PENDING' = transfers still on the way
+          if (f.transfer === 'NONE' ? !!v.transfer : f.transfer === 'PENDING' ? !(v.transfer && v.type === 'PAYMENT' && counted(v) && !v.transfer.settled && !(got || (got = H.receivedIds(s))).has(v.id)) : !v.transfer) continue;
+        }
         if (f.from && v.date < f.from) continue;
         if (f.to && v.date > f.to) continue;
         if (minP !== null && v.amountPaise < minP) continue;
@@ -2357,7 +2423,7 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
         if (q) {
           const usr = userById(s, v.userId);
           const br = branchById(s, v.branchId);
-          const hay = [v.number, v.kind === 'RECEIVED' ? 'cash received' : '', v.partyName, v.particulars, v.notes || '', usr ? usr.fullName : '', br ? br.name + ' ' + br.code : '', v.date, RW.fmtDate(v.date), RW.fmtINR(v.amountPaise), String(v.amountPaise / 100)].join(' | ').toLowerCase();
+          const hay = [v.number, v.kind === 'RECEIVED' ? 'cash received' : '', v.transfer ? 'transfer' : '', v.partyName, v.particulars, v.notes || '', usr ? usr.fullName : '', br ? br.name + ' ' + br.code : '', v.date, RW.fmtDate(v.date), RW.fmtINR(v.amountPaise), String(v.amountPaise / 100)].join(' | ').toLowerCase();
           if (!hay.includes(q) && !(qNum && String(v.amountPaise / 100) === String(Number(qNum)))) continue;
         }
         out.push(v);
@@ -2380,14 +2446,16 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
     H.parseAttachment = parseAttachment;
 
     function totalsOf(list) {
-      let i = 0, o = 0, n = 0, xp = 0, xn = 0;
+      const t = H.newFlow();
+      let n = 0, xp = 0, xn = 0, tn = 0;
       for (const v of list) {
         if (v.status === 'ACTIVE' && v.review === 'INVALID') { xp += v.amountPaise; xn++; } // audited "Not valid": shown, never counted
         if (!counted(v)) continue;
         n++;
-        if (v.type === 'RECEIPT') i += v.amountPaise; else o += v.amountPaise;
+        if (v.transfer) tn++;
+        H.addFlow(t, v);        // transfers between branches are kept apart from real cash in / out
       }
-      return { inPaise: i, outPaise: o, netPaise: i - o, count: n, notValidPaise: xp, notValidCount: xn };
+      return Object.assign(t, { netPaise: H.flowNet(t), movePaise: H.flowMove(t), count: n, transferCount: tn, notValidPaise: xp, notValidCount: xn });
     }
     H.totalsOf = totalsOf;
 
@@ -2403,6 +2471,76 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
         }));
     }
 
+    /* ------------------------------------------------------ branch transfers
+     * Money sent from one branch (or person) to another is a TRANSFER: the sender books it as a payment voucher marked "transfer", the
+     * receiver books a Cash Received / Cash Receipt that picks that transfer from the list of what is on the way. Neither side is then
+     * counted as expense or income; both registers still move, and what has been sent but not received yet shows as "on the way". */
+    const ELIGIBLE = ['USER', 'BRANCH_ADMIN', 'SUPER_ADMIN'];       // roles that can hold and receive cash
+    const holders = (s, branchId) => s.users.filter((w) => !w.deleted && w.status === 'ACTIVE' && w.branchId === branchId && ELIGIBLE.includes(w.role) && H.registerOf(s, w.id));
+    const whoLabel = (s, branchId, userId) => { const w = H.xferWho(s, branchId, userId); return w.branchName + (w.userName ? ' · ' + w.userName : ''); };
+
+    // who a transfer-out is addressed to; throws a plain message when it makes no sense
+    function transferTarget(s, sender, t) {
+      const b = branchById(s, t && t.toBranchId);
+      if (!b || b.status !== 'ACTIVE') throw new ApiError('VALIDATION', 'Choose the branch the money is sent to');
+      let w = null;
+      if (t.toUserId) {
+        w = userById(s, t.toUserId);
+        if (!w || w.deleted || w.status !== 'ACTIVE' || w.branchId !== b.id || !ELIGIBLE.includes(w.role) || !H.registerOf(s, w.id)) throw new ApiError('VALIDATION', 'Choose a person of that branch who holds a cash register');
+        if (w.id === sender.id) throw new ApiError('VALIDATION', 'You cannot send money to yourself');
+      } else if (b.id === sender.branchId) throw new ApiError('VALIDATION', 'To send money inside your own branch, also choose the person who receives it');
+      else if (!holders(s, b.id).length) throw new ApiError('VALIDATION', 'Nobody in ' + b.name + ' holds a cash register yet, so it cannot receive money');
+      return { b, w };
+    }
+    const isPending = (s, out, got) => !!(out && out.transfer && out.type === 'PAYMENT' && counted(out) && !out.transfer.settled && !(got || H.receivedIds(s)).has(out.id));
+    const addressedTo = (out, u) => out.transfer.toBranchId === u.branchId && (!out.transfer.toUserId || out.transfer.toUserId === u.id);
+    const sentLine = (s, out) => RW.fmtINR(out.amountPaise) + ' from ' + whoLabel(s, out.branchId, out.userId) + (out.number ? ' (' + out.number + ')' : '');
+
+    // a transfer-in picks one transfer that is on the way to this user; the amount must be exactly what was sent
+    function transferSource(s, u, t, amountPaise) {
+      const out = s.vouchers.find((x) => x.id === (t && t.link));
+      if (!out || !isPending(s, out)) throw new ApiError('CONFLICT', 'This transfer is no longer waiting — it was received already, cancelled or marked not valid. Reload the page and choose again.');
+      if (!addressedTo(out, u)) throw new ApiError('FORBIDDEN', 'This transfer was sent to someone else');
+      if (amountPaise !== out.amountPaise) throw new ApiError('VALIDATION', 'This transfer is for ' + RW.fmtINR(out.amountPaise) + ' — enter exactly that amount. If you really received a different amount, tell the main admin.');
+      return out;
+    }
+    function notifyTransferSent(ctx, v, b, w) {
+      const s = ctx.state;
+      const who = w ? [w] : holders(s, b.id).filter((x) => x.id !== v.userId);
+      for (const x of who) notify(ctx, { kind: 'TRANSFER_SENT', title: 'Cash is on the way to you', body: sentLine(s, v) + '. When you get it, add a Cash Received entry and tick "Money sent by a branch".', branchId: b.id, forAdmins: false, targetUserId: x.id });
+    }
+    function describeTransfer(s, v, t) {
+      if (!t) return 'Not a transfer';
+      return v.type === 'PAYMENT' ? 'Transfer to ' + whoLabel(s, t.toBranchId, t.toUserId) + (t.settled ? ' (already received)' : '') : 'Transfer from ' + whoLabel(s, t.fromBranchId, t.fromUserId) + (t.link ? ' (linked)' : '');
+    }
+    H.transferTools = { transferTarget, isPending, holders, whoLabel, describeTransfer };
+
+    /* The people one can send money to: every active branch with the staff who hold a cash register there. */
+    def('transfers.targets', { roles: ELIGIBLE }, async (ctx, p) => {
+      const s = ctx.state;
+      // the main admin correcting an old entry asks as the person who made it ("your own branch" and "yourself" then mean that person's)
+      const as = p && p.asUserId && ctx.user.role === 'SUPER_ADMIN' ? userById(s, p.asUserId) : null;
+      const u = as && !as.deleted ? as : ctx.user;
+      return {
+        branches: s.branches.filter((b) => b.status === 'ACTIVE').map((b, i) => ({
+          id: b.id, name: b.name, code: b.code, isMain: s.branches[0] && s.branches[0].id === b.id, mine: b.id === u.branchId,
+          people: holders(s, b.id).filter((x) => x.id !== u.id).map((x) => ({ id: x.id, name: x.fullName, role: x.role, designation: x.designation || '' })).sort((a, c) => a.name.localeCompare(c.name)),
+        })),
+      };
+    });
+
+    /* What is on the way to ME right now (sent to my branch or to me by name, not received yet). */
+    def('transfers.pending', { roles: ELIGIBLE }, async (ctx, p) => {
+      const s = ctx.state, u = ctx.user;
+      const every = !!(p && p.all) && u.role === 'SUPER_ADMIN';      // the main admin can look at all of them (to match an old entry with its transfer)
+      const rows = H.transfersPending(s).filter((out) => every || addressedTo(out, u)).sort((a, b) => (a.date === b.date ? b.seq - a.seq : a.date < b.date ? 1 : -1))
+        .map((out) => ({
+          id: out.id, number: out.number, date: out.date, amountPaise: out.amountPaise, particulars: out.particulars,
+          from: H.xferWho(s, out.branchId, out.userId), to: H.xferWho(s, out.transfer.toBranchId, out.transfer.toUserId), toUserName: out.transfer.toUserId ? (userById(s, out.transfer.toUserId) || {}).fullName || '' : '',
+        }));
+      return { rows, totalPaise: rows.reduce((a, r) => a + r.amountPaise, 0) };
+    });
+
     /* ---------------------------------------------------------- voucher CRUD */
     def('vouchers.create', { w: true }, async (ctx, p) => {
       const s = ctx.state, u = ctx.user;
@@ -2412,14 +2550,25 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
       const type = received ? 'RECEIPT' : p.type;
       if (type !== 'PAYMENT' && type !== 'RECEIPT') throw new ApiError('VALIDATION', 'Choose Cash Payment or Cash Receipt');
       const label = received ? 'Received From' : type === 'PAYMENT' ? 'Paid To' : 'Received From';
-      const partyName = cleanText(p.partyName, 2, 120, label);
-      const particulars = received && !String(p.particulars || '').trim()
-        ? 'Cash received from ' + partyName
-        : cleanMultiline(p.particulars, 3, 1000, type === 'PAYMENT' ? 'Payment For / Particulars' : 'Particulars');
-      const notes = p.notes ? cleanMultiline(p.notes, 0, 1000, 'Notes') : '';
       const date = p.date || todayIst();
       checkDate(s, u, date);
       const amountPaise = checkAmount(s, p.amount);
+
+      // Branch transfer: out (a payment sent to another branch / person) or in (a receipt that picks a transfer which is on the way)
+      let transfer = null, tTarget = null, tSource = null;
+      if (p.transfer) {
+        if (type === 'PAYMENT') { tTarget = transferTarget(s, u, p.transfer); transfer = { toBranchId: tTarget.b.id, toUserId: tTarget.w ? tTarget.w.id : '', settled: false }; }
+        else { tSource = transferSource(s, u, p.transfer, amountPaise); transfer = { fromBranchId: tSource.branchId, fromUserId: tSource.userId, link: tSource.id }; }
+      }
+      const partyName = transfer
+        ? cleanText(tTarget ? whoLabel(s, tTarget.b.id, tTarget.w && tTarget.w.id) : whoLabel(s, tSource.branchId, tSource.userId), 2, 120, label)
+        : cleanText(p.partyName, 2, 120, label);
+      const particulars = transfer && !String(p.particulars || '').trim()
+        ? (tTarget ? 'Cash transfer to ' + partyName : 'Cash transfer received from ' + partyName + (tSource.number ? ' (' + tSource.number + ')' : ''))
+        : received && !String(p.particulars || '').trim()
+          ? 'Cash received from ' + partyName
+          : cleanMultiline(p.particulars, 3, 1000, type === 'PAYMENT' ? 'Payment For / Particulars' : 'Particulars');
+      const notes = p.notes ? cleanMultiline(p.notes, 0, 1000, 'Notes') : '';
 
       // Idempotency: a retried (offline-queued) request returns the voucher it already created.
       const clientId = p.clientId ? String(p.clientId).slice(0, 64) : null;
@@ -2452,10 +2601,12 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
         updatedAt: nowIso(), updatedBy: u.id, version: 1, clientId, voidReason: '',
       };
       if (received) v.kind = 'RECEIVED';
+      if (transfer) v.transfer = transfer;
       s.vouchers.push(v);
+      const tAudit = transfer ? { transfer: describeTransfer(s, v, transfer) } : {};
       await audit(ctx, {
         entity: 'VOUCHER', entityId: v.id, entityLabel: vlabel(v), action: 'CREATE', branchId: v.branchId,
-        new: received ? { kind: 'Cash Received', date, receivedFrom: partyName, particulars, amount: amountPaise / 100 } : { number, type, date, partyName, particulars, amount: amountPaise / 100 },
+        new: Object.assign(received ? { kind: 'Cash Received', date, receivedFrom: partyName, particulars, amount: amountPaise / 100 } : { number, type, date, partyName, particulars, amount: amountPaise / 100 }, tAudit),
       });
       for (const a of atts) {
         storeAttachment(ctx, v, a);
@@ -2471,6 +2622,8 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
         title: type === 'PAYMENT' ? (big ? 'Large payment voucher created' : 'New voucher created') : 'New cash receipt created',
         body: 'Voucher amount ' + RW.fmtINR(amountPaise) + ' created by ' + first + ' · ' + number, branchId: v.branchId, voucherId: v.id, important: big,
       });
+      if (tTarget) notifyTransferSent(ctx, v, tTarget.b, tTarget.w);
+      if (tSource && tSource.userId !== u.id) notify(ctx, { kind: 'TRANSFER_RECEIVED', title: 'Your transfer was received', body: RW.fmtINR(amountPaise) + (tSource.number ? ' (' + tSource.number + ')' : '') + ' was received by ' + u.fullName + ' · ' + (branchById(s, u.branchId) || {}).name, branchId: tSource.branchId, forAdmins: false, targetUserId: tSource.userId });
       return { voucher: vView(s, v), duplicate: false };
     });
 
@@ -2482,8 +2635,9 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
       const pageSize = Math.min(Math.max(parseInt(p.pageSize, 10) || 25, 1), 200);
       const pages = Math.max(1, Math.ceil(list.length / pageSize));
       const page = Math.min(Math.max(parseInt(p.page, 10) || 1, 1), pages);
+      const got = H.receivedIds(s);
       return {
-        rows: list.slice((page - 1) * pageSize, page * pageSize).map((v) => vView(s, v)),
+        rows: list.slice((page - 1) * pageSize, page * pageSize).map((v) => vView(s, v, got)),
         total: list.length, page, pageSize, pages, totals: totalsOf(list),
       };
     });
@@ -2606,12 +2760,40 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
           newV[k === 'amountPaise' ? 'amount' : k] = k === 'amountPaise' ? next[k] / 100 : next[k];
         }
       }
+      // Branch transfer: the main admin can mark an old entry as a transfer (so it stops counting as income / expense), change it, or take the mark off
+      let tNext;
+      if (patch.transfer !== undefined) {
+        const t = patch.transfer;
+        const got = H.receivedIds(s);
+        if (v.type === 'PAYMENT' && v.transfer && got.has(v.id) && !(t && t.toBranchId === v.transfer.toBranchId && (t.toUserId || '') === (v.transfer.toUserId || ''))) throw new ApiError('VALIDATION', 'A branch has already received this transfer. First take the transfer mark off its Cash Received entry.');
+        if (!t) tNext = null;
+        else if (v.type === 'PAYMENT') {
+          const sender = userById(s, v.userId) || { id: v.userId, branchId: v.branchId };
+          const tg = transferTarget(s, sender, t);
+          tNext = { toBranchId: tg.b.id, toUserId: tg.w ? tg.w.id : '', settled: t.settled !== false };
+        } else if (t.link) {
+          const out = s.vouchers.find((x) => x.id === t.link);
+          if (!out || !out.transfer || out.type !== 'PAYMENT' || !counted(out)) throw new ApiError('VALIDATION', 'Choose a transfer that was sent');
+          if (got.has(out.id) && !(v.transfer && v.transfer.link === out.id)) throw new ApiError('CONFLICT', 'That transfer has already been received by another entry');
+          tNext = { fromBranchId: out.branchId, fromUserId: out.userId, link: out.id };
+        } else {
+          const b = branchById(s, t.fromBranchId);
+          if (!b) throw new ApiError('VALIDATION', 'Choose the branch the money came from');
+          const w = t.fromUserId ? userById(s, t.fromUserId) : null;
+          if (t.fromUserId && (!w || w.branchId !== b.id)) throw new ApiError('VALIDATION', 'Choose a person of that branch');
+          tNext = { fromBranchId: b.id, fromUserId: w ? w.id : '', link: '' };
+        }
+        const was = describeTransfer(s, v, v.transfer), now = describeTransfer(s, v, tNext);
+        if (was !== now) { oldV.transfer = was; newV.transfer = now; } else tNext = undefined;
+      }
       if (!Object.keys(newV).length) throw new ApiError('VALIDATION', 'Nothing was changed');
+      if (tNext !== undefined) { if (tNext) v.transfer = tNext; else delete v.transfer; }
       Object.keys(next).forEach((k) => { v[k] = next[k]; });
       if (next.amountPaise !== undefined) v.amountInWords = RW.amountInWords(v.amountPaise);
       if (v.review === 'VALID') { delete v.review; v.reviewReason = ''; v.reviewedAt = null; v.reviewedBy = null; newV.review = 'Not reviewed (changed after review)'; }
       v.version++; v.updatedAt = nowIso(); v.updatedBy = u.id;
       await audit(ctx, { entity: 'VOUCHER', entityId: v.id, entityLabel: vlabel(v) + (oldV.number ? ' (was ' + oldV.number + ')' : ''), action: 'EDIT', branchId: v.branchId, old: oldV, new: newV, reason });
+      if (tNext && v.type === 'PAYMENT' && !tNext.settled) notifyTransferSent(ctx, v, branchById(s, tNext.toBranchId), tNext.toUserId ? userById(s, tNext.toUserId) : null);
       notify(ctx, { kind: 'VOUCHER_EDITED', title: 'Admin edited voucher', body: vlabel(v) + ' edited by ' + u.fullName + ' — ' + reason, branchId: v.branchId, voucherId: v.id });
       if (v.userId !== u.id) notify(ctx, { kind: 'VOUCHER_EDITED', title: 'Your voucher was corrected', body: vlabel(v) + ' was edited by an administrator. Reason: ' + reason, branchId: v.branchId, forAdmins: false, targetUserId: v.userId, voucherId: v.id });
       return { voucher: vView(s, v) };
@@ -2693,18 +2875,21 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
       const all = s.vouchers.filter((v) => v.userId === target.id && v.status === 'ACTIVE').sort((a, b) => (a.date === b.date ? a.seq - b.seq : a.date < b.date ? -1 : 1));
       let opening = reg.openingPaise;
       for (const v of all) { if (v.date < from && counted(v)) opening += v.type === 'RECEIPT' ? v.amountPaise : -v.amountPaise; }
-      let running = opening, i = 0, o = 0, rcv = 0, nValid = 0, nInvalid = 0, xPaise = 0;
+      let running = opening, i = 0, o = 0, rcv = 0, nValid = 0, nInvalid = 0, xPaise = 0, xi = 0, xo = 0;
       const rows = [];
+      const got = H.receivedIds(s);
       for (const v of all) {
         if (v.date < from || v.date > to) continue;
         const ok = counted(v);
         const inP = ok && v.type === 'RECEIPT' ? v.amountPaise : 0;
         const outP = ok && v.type === 'PAYMENT' ? v.amountPaise : 0;
         running += inP - outP; i += inP; o += outP;
-        if (ok) { nValid++; if (v.kind === 'RECEIVED') rcv += v.amountPaise; } else { nInvalid++; xPaise += v.amountPaise; }
+        if (v.transfer) { xi += inP; xo += outP; }
+        if (ok) { nValid++; if (v.kind === 'RECEIVED' && !v.transfer) rcv += v.amountPaise; } else { nInvalid++; xPaise += v.amountPaise; }
         rows.push({
           id: v.id, date: v.date, number: v.number, kind: v.kind === 'RECEIVED' ? 'RECEIVED' : 'VOUCHER', label: vlabel(v), type: v.type, partyName: v.partyName, particulars: v.particulars,
           inPaise: inP, outPaise: outP, balancePaise: running, createdAt: v.createdAt, notValid: !ok, amountPaise: v.amountPaise, review: reviewOf(v),
+          transfer: v.transfer ? H.transferView(s, v, got) : null,
         });
       }
       const voided = s.vouchers.filter((v) => v.userId === target.id && v.status === 'VOID' && v.date >= from && v.date <= to).length;
@@ -2713,7 +2898,7 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
         register: { id: reg.id, openingPaise: reg.openingPaise },
         user: { id: target.id, fullName: target.fullName, username: target.username, designation: target.designation || '' },
         branch: b ? { id: b.id, code: b.code, name: b.name } : null,
-        from, to, openingPaise: opening, inPaise: i, outPaise: o, closingPaise: running, count: nValid, voidedCount: voided, receivedPaise: rcv, notValidCount: nInvalid, notValidPaise: xPaise, rows,
+        from, to, openingPaise: opening, inPaise: i, outPaise: o, xInPaise: xi, xOutPaise: xo, closingPaise: running, count: nValid, voidedCount: voided, receivedPaise: rcv, notValidCount: nInvalid, notValidPaise: xPaise, rows,
         currentBalancePaise: H.currentBalance(s, target.id),
       };
     }
@@ -2743,12 +2928,12 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
         .map(({ r, u }) => {
           const t = H.netFor(s, (v) => v.userId === u.id);
           const mine = s.vouchers.filter((v) => v.userId === u.id && v.status === 'ACTIVE');
-          const rcv = mine.reduce((n, v) => n + (counted(v) && v.kind === 'RECEIVED' ? v.amountPaise : 0), 0);
+          const rcv = mine.reduce((n, v) => n + (counted(v) && v.kind === 'RECEIVED' && !v.transfer ? v.amountPaise : 0), 0);
           const nv = mine.reduce((n, v) => n + (v.review === 'INVALID' ? v.amountPaise : 0), 0);
           return {
             receivedPaise: rcv, notValidPaise: nv,
             id: r.id, userId: u.id, userName: u.fullName, role: u.role, status: u.status, branchId: u.branchId, branchName: (branchById(s, u.branchId) || {}).name || '', branchCode: (branchById(s, u.branchId) || {}).code || '',
-            openingPaise: r.openingPaise, inPaise: t.inPaise, outPaise: t.outPaise, balancePaise: r.openingPaise + t.netPaise, voucherCount: t.count, lastActivityAt: u.lastActivityAt || null,
+            openingPaise: r.openingPaise, inPaise: t.inPaise + t.xInPaise, outPaise: t.outPaise + t.xOutPaise, xInPaise: t.xInPaise, xOutPaise: t.xOutPaise, balancePaise: r.openingPaise + t.movePaise, voucherCount: t.count, lastActivityAt: u.lastActivityAt || null,
           };
         })
         .sort((a, b) => a.branchName.localeCompare(b.branchName) || a.userName.localeCompare(b.userName));
@@ -2855,8 +3040,8 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
         id: b.id, code: b.code, name: b.name, address: b.address, contact: b.contact, status: b.status, createdAt: b.createdAt,
         isMain: isMainBranch(s, b),
         userCount: s.users.filter((u) => u.branchId === b.id && !u.deleted && u.status === 'ACTIVE').length,
-        inPaise: t.inPaise, outPaise: t.outPaise, netPaise: t.netPaise, count: t.count,
-        balancePaise: opening + all.netPaise, openingPaise: opening,
+        inPaise: t.inPaise, outPaise: t.outPaise, netPaise: t.netPaise, xInPaise: t.xInPaise, xOutPaise: t.xOutPaise, count: t.count,
+        balancePaise: opening + all.movePaise, openingPaise: opening,
       };
     }
     H.branchStats = branchStats;
@@ -2865,35 +3050,37 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
      * One pass over the vouchers. Whatever the listed users do not add up to (users removed earlier) is shown as one extra line so the totals always agree. */
     function booksFor(s, u, from, to, onlyBranchId) {
       const byUser = new Map(), allByUser = new Map();
+      // i / o = real cash in / out, xi / xo = transfers received / sent (kept apart, see addFlow in server-core)
+      const add = (a, v) => { if (v.type === 'RECEIPT') { if (v.transfer) a.xi += v.amountPaise; else a.i += v.amountPaise; } else if (v.transfer) a.xo += v.amountPaise; else a.o += v.amountPaise; };
       for (const v of s.vouchers) {
         if (!H.counted(v)) continue;
-        const a = allByUser.get(v.userId) || { i: 0, o: 0 };
-        if (v.type === 'RECEIPT') a.i += v.amountPaise; else a.o += v.amountPaise;
+        const a = allByUser.get(v.userId) || { i: 0, o: 0, xi: 0, xo: 0 };
+        add(a, v);
         allByUser.set(v.userId, a);
         if ((from && v.date < from) || (to && v.date > to)) continue;
-        const r = byUser.get(v.userId) || { i: 0, o: 0, n: 0 };
-        if (v.type === 'RECEIPT') r.i += v.amountPaise; else r.o += v.amountPaise;
+        const r = byUser.get(v.userId) || { i: 0, o: 0, xi: 0, xo: 0, n: 0 };
+        add(r, v);
         r.n++; byUser.set(v.userId, r);
       }
-      const total = { inPaise: 0, outPaise: 0, netPaise: 0, count: 0, balancePaise: 0, openingPaise: 0, userCount: 0 };
+      const total = { inPaise: 0, outPaise: 0, xInPaise: 0, xOutPaise: 0, netPaise: 0, count: 0, balancePaise: 0, openingPaise: 0, userCount: 0 };
       const rows = H.scopeBranches(s, u).filter((b) => !onlyBranchId || b.id === onlyBranchId).map((b) => {
         const st = branchStats(s, b, from, to);
         const users = s.users.filter((x) => !x.deleted && x.branchId === b.id && canSeeUser(u, x) && (H.registerOf(s, x.id) || allByUser.has(x.id)))
           .map((x) => {
-            const reg = H.registerOf(s, x.id), r = byUser.get(x.id) || { i: 0, o: 0, n: 0 }, a = allByUser.get(x.id) || { i: 0, o: 0 };
+            const reg = H.registerOf(s, x.id), r = byUser.get(x.id) || { i: 0, o: 0, xi: 0, xo: 0, n: 0 }, a = allByUser.get(x.id) || { i: 0, o: 0, xi: 0, xo: 0 };
             return { id: x.id, fullName: x.fullName, username: x.username, role: x.role, status: x.status, designation: x.designation || '', registerId: reg ? reg.id : null,
-              inPaise: r.i, outPaise: r.o, netPaise: r.i - r.o, count: r.n, openingPaise: reg ? reg.openingPaise : 0, balancePaise: (reg ? reg.openingPaise : 0) + a.i - a.o,
+              inPaise: r.i, outPaise: r.o, xInPaise: r.xi, xOutPaise: r.xo, netPaise: r.i - r.o, count: r.n, openingPaise: reg ? reg.openingPaise : 0, balancePaise: (reg ? reg.openingPaise : 0) + a.i - a.o + a.xi - a.xo,
               lastActivityAt: x.lastActivityAt || null };
           })
           .sort((x, y) => (x.role === 'BRANCH_ADMIN' ? 0 : 1) - (y.role === 'BRANCH_ADMIN' ? 0 : 1) || x.fullName.localeCompare(y.fullName));
         const sum = (k) => users.reduce((q, x) => q + x[k], 0);
-        const rest = { inPaise: st.inPaise - sum('inPaise'), outPaise: st.outPaise - sum('outPaise'), count: st.count - sum('count'), openingPaise: st.openingPaise - sum('openingPaise'), balancePaise: st.balancePaise - sum('balancePaise') };
-        if (rest.inPaise || rest.outPaise || rest.count || rest.balancePaise) {
+        const rest = { inPaise: st.inPaise - sum('inPaise'), outPaise: st.outPaise - sum('outPaise'), xInPaise: st.xInPaise - sum('xInPaise'), xOutPaise: st.xOutPaise - sum('xOutPaise'), count: st.count - sum('count'), openingPaise: st.openingPaise - sum('openingPaise'), balancePaise: st.balancePaise - sum('balancePaise') };
+        if (rest.inPaise || rest.outPaise || rest.xInPaise || rest.xOutPaise || rest.count || rest.balancePaise) {
           users.push({ id: '_former', fullName: 'Removed users', username: '', role: '', status: 'INACTIVE', designation: 'Earlier entries of users who were removed', registerId: null, former: true,
-            inPaise: rest.inPaise, outPaise: rest.outPaise, netPaise: rest.inPaise - rest.outPaise, count: rest.count, openingPaise: rest.openingPaise, balancePaise: rest.balancePaise, lastActivityAt: null });
+            inPaise: rest.inPaise, outPaise: rest.outPaise, xInPaise: rest.xInPaise, xOutPaise: rest.xOutPaise, netPaise: rest.inPaise - rest.outPaise, count: rest.count, openingPaise: rest.openingPaise, balancePaise: rest.balancePaise, lastActivityAt: null });
         }
-        total.inPaise += st.inPaise; total.outPaise += st.outPaise; total.count += st.count; total.balancePaise += st.balancePaise; total.openingPaise += st.openingPaise; total.userCount += st.userCount;
-        return { id: b.id, code: b.code, name: b.name, status: b.status, isMain: st.isMain, inPaise: st.inPaise, outPaise: st.outPaise, netPaise: st.netPaise, count: st.count,
+        total.inPaise += st.inPaise; total.outPaise += st.outPaise; total.xInPaise += st.xInPaise; total.xOutPaise += st.xOutPaise; total.count += st.count; total.balancePaise += st.balancePaise; total.openingPaise += st.openingPaise; total.userCount += st.userCount;
+        return { id: b.id, code: b.code, name: b.name, status: b.status, isMain: st.isMain, inPaise: st.inPaise, outPaise: st.outPaise, xInPaise: st.xInPaise, xOutPaise: st.xOutPaise, netPaise: st.netPaise, count: st.count,
           openingPaise: st.openingPaise, balancePaise: st.balancePaise, userCount: st.userCount, users };
       });
       total.netPaise = total.inPaise - total.outPaise;
@@ -3035,7 +3222,7 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
         .map((u) => {
           const t = H.netFor(s, (v) => v.userId === u.id);
           const reg = H.registerOf(s, u.id);
-          return Object.assign(pubUser(s, u), { voucherCount: t.count, balancePaise: reg ? reg.openingPaise + t.netPaise : null, canManage: canManage(ctx.user, u) });
+          return Object.assign(pubUser(s, u), { voucherCount: t.count, balancePaise: reg ? reg.openingPaise + t.movePaise : null, canManage: canManage(ctx.user, u) });
         })
         .sort((a, b) => a.branchName.localeCompare(b.branchName) || a.fullName.localeCompare(b.fullName));
       return { rows };
@@ -3440,16 +3627,17 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
       const m = new Map();
       for (const v of list) {
         if (!H.counted(v)) continue;
-        const r = m.get(v.date) || { inPaise: 0, outPaise: 0, count: 0 };
-        if (v.type === 'RECEIPT') r.inPaise += v.amountPaise; else r.outPaise += v.amountPaise;
+        const r = m.get(v.date) || { inPaise: 0, outPaise: 0, xInPaise: 0, xOutPaise: 0, count: 0 };
+        H.addFlow(r, v);
         r.count++; m.set(v.date, r);
       }
       return m;
     }
     function sumDays(m, from, to) {
-      let i = 0, o = 0, c = 0;
-      for (let d = from; d <= to; d = RW.addDays(d, 1)) { const r = m.get(d); if (r) { i += r.inPaise; o += r.outPaise; c += r.count; } }
-      return { inPaise: i, outPaise: o, netPaise: i - o, count: c };
+      const t = H.newFlow();
+      let c = 0;
+      for (let d = from; d <= to; d = RW.addDays(d, 1)) { const r = m.get(d); if (r) { t.inPaise += r.inPaise; t.outPaise += r.outPaise; t.xInPaise += r.xInPaise; t.xOutPaise += r.xOutPaise; c += r.count; } }
+      return Object.assign(t, { netPaise: H.flowNet(t), movePaise: H.flowMove(t), count: c });
     }
     function rangeParams(s, p) {
       const today = todayIst();
@@ -3459,19 +3647,19 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
     }
     function seriesDaily(m, to, n) {
       const out = [];
-      for (let i = n - 1; i >= 0; i--) { const d = RW.addDays(to, -i); const r = m.get(d) || { inPaise: 0, outPaise: 0, count: 0 }; out.push({ date: d, label: RW.fmtDateShort(d), inPaise: r.inPaise, outPaise: r.outPaise, count: r.count }); }
+      for (let i = n - 1; i >= 0; i--) { const d = RW.addDays(to, -i); const r = m.get(d) || { inPaise: 0, outPaise: 0, xInPaise: 0, xOutPaise: 0, count: 0 }; out.push({ date: d, label: RW.fmtDateShort(d), inPaise: r.inPaise, outPaise: r.outPaise, xInPaise: r.xInPaise, xOutPaise: r.xOutPaise, count: r.count }); }
       return out;
     }
     function seriesWeekly(m, today, n) {
       const out = [];
       const start = RW.startOfWeek(today);
-      for (let i = n - 1; i >= 0; i--) { const f = RW.addDays(start, -7 * i); const t = RW.addDays(f, 6); const r = sumDays(m, f, t > today ? today : t); out.push({ date: f, label: RW.fmtDateShort(f), inPaise: r.inPaise, outPaise: r.outPaise, count: r.count }); }
+      for (let i = n - 1; i >= 0; i--) { const f = RW.addDays(start, -7 * i); const t = RW.addDays(f, 6); const r = sumDays(m, f, t > today ? today : t); out.push({ date: f, label: RW.fmtDateShort(f), inPaise: r.inPaise, outPaise: r.outPaise, xInPaise: r.xInPaise, xOutPaise: r.xOutPaise, count: r.count }); }
       return out;
     }
     function seriesMonthly(m, today, n) {
       const out = [];
       const start = RW.startOfMonth(today);
-      for (let i = n - 1; i >= 0; i--) { const f = RW.addMonths(start, -i); const t = RW.endOfMonth(f); const r = sumDays(m, f, t > today ? today : t); out.push({ date: f, label: RW.MONTHS[+f.slice(5, 7) - 1] + " '" + f.slice(2, 4), inPaise: r.inPaise, outPaise: r.outPaise, count: r.count }); }
+      for (let i = n - 1; i >= 0; i--) { const f = RW.addMonths(start, -i); const t = RW.endOfMonth(f); const r = sumDays(m, f, t > today ? today : t); out.push({ date: f, label: RW.MONTHS[+f.slice(5, 7) - 1] + " '" + f.slice(2, 4), inPaise: r.inPaise, outPaise: r.outPaise, xInPaise: r.xInPaise, xOutPaise: r.xOutPaise, count: r.count }); }
       return out;
     }
     function balanceTrend(s, u, list, today, n, branchId) {
@@ -3486,9 +3674,9 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
       const first = RW.addDays(today, -(n - 1));
       let run = base;
       const before = [...m.entries()].filter(([d]) => d < first);
-      for (const [, r] of before) run += r.inPaise - r.outPaise;
+      for (const [, r] of before) run += r.inPaise - r.outPaise + r.xInPaise - r.xOutPaise;
       const out = [];
-      for (let i = 0; i < n; i++) { const d = RW.addDays(first, i); const r = m.get(d); if (r) run += r.inPaise - r.outPaise; out.push({ date: d, label: RW.fmtDateShort(d), balancePaise: run }); }
+      for (let i = 0; i < n; i++) { const d = RW.addDays(first, i); const r = m.get(d); if (r) run += r.inPaise - r.outPaise + r.xInPaise - r.xOutPaise; out.push({ date: d, label: RW.fmtDateShort(d), balancePaise: run }); }
       return out;
     }
     function scopeOpening(s, u, branchId) {
@@ -3501,6 +3689,20 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
       }
       return a;
     }
+
+    /* Money that has been sent to another branch / person but not received yet ("on the way"), as far as this user may see it. */
+    function transitFor(s, u, scopeId) {
+      const lv = level(u);
+      const mine = H.transfersPending(s).filter((out) => {
+        const t = out.transfer;
+        if (lv === 'ALL') return !scopeId || out.branchId === scopeId || t.toBranchId === scopeId;
+        if (lv === 'BRANCH') return out.branchId === u.branchId || t.toBranchId === u.branchId;
+        return out.userId === u.id || (t.toBranchId === u.branchId && (!t.toUserId || t.toUserId === u.id));
+      }).sort((a, b) => (a.date === b.date ? b.seq - a.seq : a.date < b.date ? 1 : -1));
+      const view = (out) => ({ id: out.id, number: out.number, date: out.date, amountPaise: out.amountPaise, from: H.xferWho(s, out.branchId, out.userId), to: H.xferWho(s, out.transfer.toBranchId, out.transfer.toUserId), mineToReceive: out.transfer.toBranchId === u.branchId && (!out.transfer.toUserId || out.transfer.toUserId === u.id) && out.userId !== u.id, sentByMe: out.userId === u.id });
+      return { count: mine.length, paise: mine.reduce((a, v) => a + v.amountPaise, 0), items: mine.slice(0, 8).map(view) };
+    }
+    H.transitFor = transitFor;
 
     def('dashboard.get', {}, async (ctx, p) => {
       const s = ctx.state, u = ctx.user;
@@ -3523,6 +3725,7 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
         const reg = H.registerOf(s, u.id);
         const bal = H.currentBalance(s, u.id);
         out.self = { registerId: reg ? reg.id : null, openingPaise: reg ? reg.openingPaise : 0, balancePaise: bal };
+        out.transit = transitFor(s, u, '');
         return out;
       }
       const kr = (p && p.range) || 'month';
@@ -3532,11 +3735,12 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
       const activeUsers = s.users.filter((x) => !x.deleted && x.status === 'ACTIVE' && canSeeUser(u, x) && (!scopeId || x.branchId === scopeId)).length;
       out.kpiRange = { key: kr, label: range.label, from: range.from, to: range.to };
       out.kpis = Object.assign({}, k, {
-        balancePaise: scopeOpening(s, u, scopeId) + sumDays(m, '2000-01-01', today).netPaise,
+        balancePaise: scopeOpening(s, u, scopeId) + sumDays(m, '2000-01-01', today).movePaise,
         outstandingPaise: isAdmin(u) ? H.outstandingTotalFor(s, u, scopeId) : null,
         activeUsers, activeBranches: brs.filter((b) => b.status === 'ACTIVE').length,
       });
       out.branches = brs.map((b) => branchStats(s, b, range.from, range.to));
+      out.transit = transitFor(s, u, scopeId);
       out.scope = scopeId ? { branchId: scopeId, name: branchById(s, scopeId).name, isMain: isMainBranch(s, branchById(s, scopeId)) } : { branchId: '' };
       out.books = booksFor(s, u, range.from, range.to > today ? today : range.to, scopeId);
       if (isSuper(u) && H.backupStatus) out.backup = H.backupStatus(s);       // the "take a backup" reminder
@@ -3557,7 +3761,7 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
       const money = (x) => RW.fmtINR2(x);
 
       // one pass over every voucher: period totals, previous period, per-branch, per-user, per-party
-      const blank = () => ({ inPaise: 0, outPaise: 0, givenPaise: 0, count: 0, notValidPaise: 0, notValidCount: 0 });
+      const blank = () => ({ inPaise: 0, outPaise: 0, xInPaise: 0, xOutPaise: 0, givenPaise: 0, count: 0, notValidPaise: 0, notValidCount: 0 });
       const cur = blank(), prev = blank();
       const perBranch = new Map(), perUser = new Map(), parties = new Map();
       const bOf = (id) => { let r = perBranch.get(id); if (!r) perBranch.set(id, r = Object.assign(blank(), { allNetPaise: 0, pendingCount: 0, pendingPaise: 0, oldestPendingDate: null, lastEntryAt: '', todayCount: 0 })); return r; };
@@ -3582,8 +3786,8 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
           if (v.status === 'ACTIVE' && v.review === 'INVALID') { tot.notValidPaise += v.amountPaise; tot.notValidCount++; if (brk) { brk.notValidPaise += v.amountPaise; brk.notValidCount++; } }
           if (!live) continue;
           const tt = [tot].concat(brk ? [brk] : []);
-          for (const t of tt) { t.count++; if (v.type === 'RECEIPT') { t.inPaise += v.amountPaise; if (v.kind === 'RECEIVED') t.givenPaise += v.amountPaise; } else t.outPaise += v.amountPaise; }
-          if (tot === cur && v.type === 'PAYMENT') {
+          for (const t of tt) { t.count++; H.addFlow(t, v); if (v.type === 'RECEIPT' && v.kind === 'RECEIVED' && !v.transfer) t.givenPaise += v.amountPaise; }
+          if (tot === cur && v.type === 'PAYMENT' && !v.transfer) {
             us.outPaise += v.amountPaise; us.count++;
             const pk = (v.partyName || '').trim().toLowerCase();
             const pr = parties.get(pk) || { name: v.partyName, outPaise: 0, count: 0 }; pr.outPaise += v.amountPaise; pr.count++; parties.set(pk, pr);
@@ -3623,7 +3827,7 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
         const bst = branchStats(s, b, from, to);
         return {
           id: b.id, code: b.code, name: b.name, status: b.status, activeUsers: bst.userCount, staff: activeStaff,
-          balancePaise: bst.balancePaise, inPaise: t.inPaise, outPaise: t.outPaise, netPaise: t.inPaise - t.outPaise, givenPaise: t.givenPaise, count: t.count,
+          balancePaise: bst.balancePaise, inPaise: t.inPaise, outPaise: t.outPaise, xInPaise: t.xInPaise, xOutPaise: t.xOutPaise, netPaise: t.inPaise - t.outPaise, givenPaise: t.givenPaise, count: t.count,
           pendingCount: t.pendingCount, pendingPaise: t.pendingPaise, notValidCount: t.notValidCount, notValidPaise: t.notValidPaise,
           overduePaise: overdueBy.get(b.id) || 0, lastEntryAt: t.lastEntryAt || null, todayCount: t.todayCount,
         };
@@ -3681,14 +3885,16 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
         feed.push({ at: a.at, actorName: a.actorName, actorRole: a.actorRole, action: a.action, entity: a.entity, entityId: a.entityId, label: a.entityLabel, reason: a.reason || '', branchName: (branchById(s, a.branchId) || {}).name || '' });
       }
       const pct = (a, b) => (b > 0 ? Math.round(((a - b) / b) * 1000) / 10 : null);
+      const transit = transitFor(s, u, '');
       return {
         generatedAt: nowIso(), today, range: { key, label: rg.label, from, to, days }, prevRange: days ? { from: prevFrom, to: prevTo } : null,
         kpis: {
-          cashInHandPaise: cashInHand, inPaise: cur.inPaise, outPaise: cur.outPaise, netPaise: cur.inPaise - cur.outPaise, givenPaise: cur.givenPaise, count: cur.count,
+          cashInHandPaise: cashInHand, transitPaise: transit.paise, transitCount: transit.count, inPaise: cur.inPaise, outPaise: cur.outPaise, xInPaise: cur.xInPaise, xOutPaise: cur.xOutPaise, netPaise: cur.inPaise - cur.outPaise, givenPaise: cur.givenPaise, count: cur.count,
           notValidPaise: cur.notValidPaise, notValidCount: cur.notValidCount, outstanding: os.total, overdue: os.overdue,
           activeBranches: s.branches.filter((b) => b.status === 'ACTIVE').length, activeUsers: s.users.filter((x) => !x.deleted && x.status === 'ACTIVE').length,
           prev: days ? { inPaise: prev.inPaise, outPaise: prev.outPaise, count: prev.count, inPct: pct(cur.inPaise, prev.inPaise), outPct: pct(cur.outPaise, prev.outPaise), countPct: pct(cur.count, prev.count) } : null,
         },
+        transit,
         review: { pendingCount: pendingList.length, pendingPaise, oldestDate: oldestPending, oldestDays: oldestPending ? RW.diffDays(today, oldestPending) : 0 },
         branches, alerts,
         topParties: [...parties.values()].sort((a, b) => b.outPaise - a.outPaise).slice(0, 5),
@@ -3719,7 +3925,7 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
           series.push({ date: f, label: RW.MONTHS[+f.slice(5, 7) - 1] + " '" + f.slice(2, 4), inPaise: x.inPaise, outPaise: x.outPaise, count: x.count });
         }
       }
-      return { range: r, inPaise: t.inPaise, outPaise: t.outPaise, netPaise: t.netPaise, count: t.count, series };
+      return { range: r, inPaise: t.inPaise, outPaise: t.outPaise, xInPaise: t.xInPaise, xOutPaise: t.xOutPaise, netPaise: t.netPaise, count: t.count, series };
     });
 
     def('reports.branches', { roles: ['SUPER_ADMIN', 'BRANCH_ADMIN', 'CEO', 'VIEWER'] }, async (ctx, p) => {
@@ -3747,7 +3953,7 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
       const tt = totalsOf(list);
       const reg = H.registerOf(s, t.id);
       return {
-        range: r, user: pubUser(s, t), registerId: reg ? reg.id : null, count: tt.count, inPaise: tt.inPaise, outPaise: tt.outPaise, netPaise: tt.netPaise,
+        range: r, user: pubUser(s, t), registerId: reg ? reg.id : null, count: tt.count, inPaise: tt.inPaise, outPaise: tt.outPaise, xInPaise: tt.xInPaise, xOutPaise: tt.xOutPaise, netPaise: tt.netPaise,
         currentBalancePaise: reg ? H.currentBalance(s, t.id) : null, lastActivityAt: t.lastActivityAt || null,
         totalVouchersAll: s.vouchers.filter((v) => v.userId === t.id && H.counted(v)).length,
         rows: list.slice(0, 200).map((v) => vView(s, v)), truncated: list.length > 200,
@@ -3782,8 +3988,8 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
       const rows = list.map((v) => {
         const x = vView(s, v);
         return {
-          number: x.number || '—', type: x.kind === 'RECEIVED' ? 'Cash Received' : x.type === 'PAYMENT' ? 'Cash Payment' : 'Cash Receipt', date: x.date, branch: x.branchName, user: x.userName, party: x.partyName,
-          particulars: x.particulars, branchCode: x.branchCode, amount: x.amount, cashIn: x.counted && x.type === 'RECEIPT' ? x.amount : null, cashOut: x.counted && x.type === 'PAYMENT' ? x.amount : null, amountInWords: x.amountInWords,
+          number: x.number || '—', type: x.transfer ? (x.type === 'PAYMENT' ? 'Transfer Out' : 'Transfer In') : x.kind === 'RECEIVED' ? 'Cash Received' : x.type === 'PAYMENT' ? 'Cash Payment' : 'Cash Receipt', date: x.date, branch: x.branchName, user: x.userName, party: x.partyName,
+          particulars: x.particulars, branchCode: x.branchCode, amount: x.amount, cashIn: x.counted && x.type === 'RECEIPT' && !x.transfer ? x.amount : null, cashOut: x.counted && x.type === 'PAYMENT' && !x.transfer ? x.amount : null, transferIn: x.counted && x.type === 'RECEIPT' && x.transfer ? x.amount : null, transferOut: x.counted && x.type === 'PAYMENT' && x.transfer ? x.amount : null, amountInWords: x.amountInWords,
           status: x.status, review: { VALID: 'Valid', INVALID: 'Not valid', PENDING: 'Not reviewed', NA: '' }[x.review] || '', reviewReason: x.reviewReason, createdAt: x.createdAt, createdBy: x.createdBy, attachments: x.attachmentCount,
         };
       });
@@ -4901,7 +5107,7 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
 
   const FORMAT = 'ravi-cash-backup';
   const VERSION = 1;
-  const APP = 'Ravi Cash 5.4';
+  const APP = 'Ravi Cash 5.5';
   const ROLES = ['SUPER_ADMIN', 'CEO', 'BRANCH_ADMIN', 'USER', 'VIEWER'];
   const CORE_LISTS = ['branches', 'users', 'registers', 'vouchers', 'attachments', 'statements', 'outstanding', 'notifications', 'audit'];
   const OPTIONAL_LISTS = ['tours', 'visits'];
@@ -4915,7 +5121,7 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
     const arr = (k) => (Array.isArray(db && db[k]) ? db[k] : []);
     let inP = 0, outP = 0, first = '', last = '';
     for (const v of arr('vouchers')) {
-      if (v && v.status === 'ACTIVE' && v.review !== 'INVALID') { if (v.type === 'RECEIPT') inP += v.amountPaise || 0; else outP += v.amountPaise || 0; }
+      if (v && v.status === 'ACTIVE' && v.review !== 'INVALID') { if (v.transfer) { /* money moved between branches is neither cash in nor cash out */ } else if (v.type === 'RECEIPT') inP += v.amountPaise || 0; else outP += v.amountPaise || 0; }
       if (v && v.date) { if (!first || v.date < first) first = v.date; if (v.date > last) last = v.date; }
     }
     return {
@@ -5349,6 +5555,25 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
           body: 'Voucher amount ' + RW.fmtINR(v.amountPaise) + ' created by ' + u.fullName.split(' ')[0] + ' · ' + number, branchId: v.branchId, voucherId: v.id, important: big,
         });
       }
+    }
+
+    /* -------- branch transfers: head office sends cash to Indore (received) and to Nagpur (still on the way) */
+    if (o.transfers !== false) {
+      const vno = (type) => { const nm = settings.numbering[type]; return nm.prefix + '-' + String(++s.counters[type]).padStart(nm.pad, '0'); };
+      const put = async (userId, x) => {
+        const u = s.users.find((w) => w.id === userId);
+        const at = iso(x.date, x.hour);
+        const v = Object.assign({
+          id: 'v_x' + String(s.vouchers.length + 1).padStart(4, '0'), seq: ++s.seq.voucher, branchId: u.branchId, userId, notes: '', attachmentIds: [], status: 'ACTIVE', locked: true,
+          createdAt: at, createdBy: userId, updatedAt: at, updatedBy: userId, version: 1, clientId: null, voidReason: '', amountInWords: RW.amountInWords(x.amountPaise),
+        }, x.v);
+        s.vouchers.push(v);
+        await H.audit({ state: s, user: u, meta: { device: o.device || 'Demo seed', ip: 'demo' } }, { at, entity: 'VOUCHER', entityId: v.id, entityLabel: v.number || 'Cash Received', action: 'CREATE', branchId: v.branchId, new: { number: v.number, type: v.type, date: v.date, partyName: v.partyName, amount: v.amountPaise / 100, transfer: x.label } });
+        return v;
+      };
+      const sent1 = await put('u_main', { date: RW.addDays(today, -3), hour: 11, amountPaise: 2500000, label: 'Transfer to Indore', v: { number: vno('PAYMENT'), type: 'PAYMENT', date: RW.addDays(today, -3), partyName: 'Ravi Water Flow Pump - Indore · Rahul Patel', particulars: 'Cash transfer to Indore for the monthly float', amountPaise: 2500000, transfer: { toBranchId: 'br_indore', toUserId: 'u_indore', settled: false }, review: 'VALID', reviewReason: '', reviewedAt: iso(RW.addDays(today, -3), 15), reviewedBy: 'u_admin' } });
+      await put('u_indore', { date: RW.addDays(today, -3), hour: 16, amountPaise: 2500000, label: 'Transfer from Main', v: { number: '', kind: 'RECEIVED', type: 'RECEIPT', date: RW.addDays(today, -3), partyName: 'Ravi Water Flow Pump · Suresh Mehta', particulars: 'Cash transfer received from head office (' + sent1.number + ')', amountPaise: 2500000, transfer: { fromBranchId: 'br_main', fromUserId: 'u_main', link: sent1.id } } });
+      await put('u_main', { date: RW.addDays(today, -1), hour: 12, amountPaise: 1200000, label: 'Transfer to Nagpur', v: { number: vno('PAYMENT'), type: 'PAYMENT', date: RW.addDays(today, -1), partyName: 'Ravi Water Flow Pump - Nagpur', particulars: 'Cash transfer to Nagpur for stock purchase', amountPaise: 1200000, transfer: { toBranchId: 'br_nagpur', toUserId: '', settled: false } } });
     }
 
     /* -------- outstanding (dates relative to today so the demo never goes stale) */
@@ -6590,11 +6815,11 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
   RW.buildStatementPdf = async function (st) {
     const m = (p) => RW.fmtINR2(p, { symbol: false });
     const money = (p) => (p ? m(p) : '');
-    const typeName = (t, kind) => (kind === 'RECEIVED' ? 'Cash Received' : t === 'PAYMENT' ? 'Cash Payment' : 'Cash Receipt');
+    const typeName = (t, kind, tr) => (tr ? (t === 'PAYMENT' ? 'Transfer Out' : 'Transfer In') : kind === 'RECEIVED' ? 'Cash Received' : t === 'PAYMENT' ? 'Cash Payment' : 'Cash Receipt');
     const rows = [{ cells: [RW.fmtDate(st.from), '', '', '', 'Opening Balance — cash brought forward', '', '', m(st.openingPaise)], bold: true, fill: '#EAF0F7' }];
     for (const r of st.rows) rows.push({
       // a payment marked "Not valid" in the audit review is listed but not counted
-      cells: [RW.fmtDate(r.date), r.number || '—', typeName(r.type, r.kind), r.partyName, r.particulars, money(r.inPaise), r.notValid ? 'Not valid' : money(r.outPaise), m(r.balancePaise)],
+      cells: [RW.fmtDate(r.date), r.number || '—', typeName(r.type, r.kind, r.transfer), r.partyName, r.particulars, money(r.inPaise), r.notValid ? 'Not valid' : money(r.outPaise), m(r.balancePaise)],
       colors: [null, null, null, null, null, RW.COLORS.inflow, r.notValid ? RW.COLORS.gray || null : RW.COLORS.outflow, null],
     });
     rows.push({ cells: [RW.fmtDate(st.to), '', '', '', 'Closing Balance — total ' + st.count + ' entr' + (st.count === 1 ? 'y' : 'ies') + (st.notValidCount ? ' (+' + st.notValidCount + ' not valid, not counted)' : ''), m(st.inPaise), m(st.outPaise), m(st.closingPaise)], bold: true, fill: '#EAF0F7' });
@@ -6618,7 +6843,7 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
         { label: 'Cash In (₹)', w: 26, align: 'right' }, { label: 'Cash Out (₹)', w: 26, align: 'right' }, { label: 'Balance (₹)', w: 28, align: 'right' },
       ],
       rows,
-      note: st.voidedCount ? st.voidedCount + ' voided voucher' + (st.voidedCount > 1 ? 's' : '') + ' in this period are excluded from the totals.' : '',
+      note: [st.voidedCount ? st.voidedCount + ' voided voucher' + (st.voidedCount > 1 ? 's' : '') + ' in this period are excluded from the totals.' : '', st.xInPaise || st.xOutPaise ? 'Cash In / Out above include money moved between branches (transfers received ₹' + m(st.xInPaise) + ', sent ₹' + m(st.xOutPaise) + '). Transfers are not income or expense.' : ''].filter(Boolean).join(' '),
       generatedBy: st.generatedBy.fullName, generatedAt: st.generatedAt, branchName: st.generatedByBranch,
     };
     return RW.buildTableDoc(spec);
@@ -6775,7 +7000,7 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
   RW.VOUCHER_COLUMNS = [
     { key: 'number', label: 'Voucher No.', width: 14 }, { key: 'type', label: 'Type', width: 14 }, { key: 'date', label: 'Date', width: 13, type: 'date' },
     { key: 'branch', label: 'Branch', width: 30 }, { key: 'user', label: 'User', width: 20 }, { key: 'party', label: 'Party', width: 28 },
-    { key: 'particulars', label: 'Particulars', width: 48, wrap: true }, { key: 'cashIn', label: 'Cash In (₹)', width: 14, type: 'money' }, { key: 'cashOut', label: 'Cash Out (₹)', width: 14, type: 'money' }, { key: 'amount', label: 'Voucher Amount (₹)', width: 18, type: 'money' },
+    { key: 'particulars', label: 'Particulars', width: 48, wrap: true }, { key: 'cashIn', label: 'Cash In (₹)', width: 14, type: 'money' }, { key: 'cashOut', label: 'Cash Out (₹)', width: 14, type: 'money' }, { key: 'transferIn', label: 'Transfer In (₹)', width: 15, type: 'money' }, { key: 'transferOut', label: 'Transfer Out (₹)', width: 16, type: 'money' }, { key: 'amount', label: 'Voucher Amount (₹)', width: 18, type: 'money' },
     { key: 'amountInWords', label: 'Amount in Words', width: 44 }, { key: 'status', label: 'Status', width: 10 }, { key: 'review', label: 'Audit Review', width: 14 }, { key: 'reviewReason', label: 'Review Reason', width: 30 }, { key: 'createdAt', label: 'Created At', width: 22 }, { key: 'createdBy', label: 'Created By', width: 18 }, { key: 'attachments', label: 'Attachments', width: 12, type: 'int' },
   ];
 })(typeof window !== 'undefined' ? window : globalThis);
@@ -6874,6 +7099,7 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
     calendar: 'M5 4h14a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM16 2v4M8 2v4M3 10h18',
     inflow: 'M17 7 7 17M7 8v9h9',
     outflow: 'M7 17 17 7M8 7h9v9',
+    swap: 'M7 4 3 8l4 4M3 8h15M17 20l4-4-4-4M21 16H6',
     rupee: 'M6 3h12M6 8h12M9 13h-3 3a5 5 0 0 0 0-10M6 13l8.5 8',
     key: 'M21 2l-2 2m-7.6 7.6a5.5 5.5 0 1 1-7.8 7.8 5.5 5.5 0 0 1 7.8-7.8zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4',
     history: 'M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5M12 7v5l4 2',
@@ -7010,8 +7236,13 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
   UI.userStatusBadge = (s) => UI.badge(s, s === 'ACTIVE' ? 'green' : s === 'SUSPENDED' ? 'red' : 'gray');
   UI.roleName = (r) => ({ SUPER_ADMIN: 'Super Admin', CEO: 'CEO', BRANCH_ADMIN: 'Branch Admin', USER: 'Branch User', VIEWER: 'Viewer' }[r] || r);
   // kind === 'RECEIVED' is "Cash Received": money handed to a user, stored as a receipt but without a voucher number
-  UI.typeLabel = (t, kind) => (kind === 'RECEIVED' ? 'Cash Received' : t === 'PAYMENT' ? 'Cash Payment' : 'Cash Receipt');
-  UI.typeBadge = (t, kind) => h('span', { class: 'type-pill ' + (t === 'PAYMENT' ? 'out' : 'in') }, UI.icon(kind === 'RECEIVED' ? 'wallet' : t === 'PAYMENT' ? 'outflow' : 'inflow', 12), kind === 'RECEIVED' ? 'Received' : t === 'PAYMENT' ? 'Payment' : 'Receipt');
+  // `tr` (the voucher's transfer info) turns a payment / receipt into "Transfer out / in": money moved between branches or people, not expense or income
+  UI.typeLabel = (t, kind, tr) => (tr ? (t === 'PAYMENT' ? 'Transfer Out' : 'Transfer In') : kind === 'RECEIVED' ? 'Cash Received' : t === 'PAYMENT' ? 'Cash Payment' : 'Cash Receipt');
+  UI.typeBadge = (t, kind, tr) => (tr
+    ? h('span', { class: 'type-pill xfer' }, UI.icon('swap', 12), t === 'PAYMENT' ? 'Transfer out' : 'Transfer in')
+    : h('span', { class: 'type-pill ' + (t === 'PAYMENT' ? 'out' : 'in') }, UI.icon(kind === 'RECEIVED' ? 'wallet' : t === 'PAYMENT' ? 'outflow' : 'inflow', 12), kind === 'RECEIVED' ? 'Received' : t === 'PAYMENT' ? 'Payment' : 'Receipt'));
+  // "to Indore · Rahul" / "from Main · Suresh" for a transfer
+  UI.transferWho = (tr) => (tr ? (tr.dir === 'OUT' ? 'to ' : 'from ') + (tr.branchName || 'a branch') + (tr.userName ? ' · ' + tr.userName : '') : '');
   // audit review of a payment: VALID counts as expense, INVALID ("Not valid") does not, PENDING is not reviewed yet
   UI.reviewLabel = (r) => ({ VALID: 'Valid', INVALID: 'Not valid', PENDING: 'To review' }[r] || '');
   UI.reviewBadge = (r) => (r === 'VALID' ? UI.badge('VALID', 'green', 'check') : r === 'INVALID' ? UI.badge('NOT VALID', 'red', 'ban') : r === 'PENDING' ? UI.badge('TO REVIEW', 'amber', 'clock') : null);
@@ -8067,6 +8298,73 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
   };
 
   /* Box shown on the voucher page: current review state + (for the main / Super admin only) the buttons. Returns null when not applicable. */
+  /* ---------------------------------------------------------- branch transfers (shared by the voucher form and the admin edit dialog) */
+  const branchLabel = (b) => b.name + (b.isMain ? ' (Main)' : '') + (b.mine ? ' — your branch' : '');
+  // Sending: "this money goes to another branch or person". value() is what vouchers.create / vouchers.edit expect.
+  V.transferOutBox = function (targets, o) {
+    o = o || {};
+    const on = h('input', { type: 'checkbox' });
+    const branch = h('select', null, h('option', { value: '' }, 'Choose a branch'), targets.branches.map((b) => h('option', { value: b.id }, branchLabel(b))));
+    const person = h('select', null);
+    const settled = h('input', { type: 'checkbox', checked: true });
+    const fBranch = UI.field('Send to branch', branch), fPerson = UI.field('Receiver', person);
+    const body = h('div', { class: 'stack xfer-body', style: { gap: '12px' }, hidden: true },
+      h('div', { class: 'form-grid' }, fBranch, fPerson),
+      o.settledChoice ? h('label', { class: 'opt-row' }, settled, h('span', null, 'The branch has already received this money', h('small', null, 'Tick this for old entries: nothing is shown as "on the way". Untick it if the branch still has to confirm it.'))) : null);
+    function fillPeople() {
+      const b = targets.branches.find((x) => x.id === branch.value);
+      UI.mount(person, h('option', { value: '' }, b && b.mine ? 'Choose the person' : 'Anyone in this branch can receive it'), b ? b.people.map((x) => h('option', { value: x.id }, x.name + ' — ' + UI.roleName(x.role) + (x.designation ? ' · ' + x.designation : ''))) : null);
+      person.disabled = !b;
+    }
+    const sync = () => { body.hidden = !on.checked; if (o.onChange) o.onChange(); };
+    on.addEventListener('change', sync); branch.addEventListener('change', () => { fillPeople(); sync(); }); person.addEventListener('change', sync);
+    fillPeople();
+    const el = h('div', { class: 'xfer-box' },
+      h('label', { class: 'opt-row' }, on, h('span', null, h('b', null, o.title || 'This money is for another branch or person (transfer)'), h('small', null, o.hint || 'It is then not counted as an expense. The receiver adds it as "Cash Received", and both registers match.'))),
+      body);
+    return {
+      el, isOn: () => on.checked,
+      set(t) { on.checked = !!t; if (t) { branch.value = t.branchId || ''; fillPeople(); person.value = t.userId || ''; settled.checked = t.settled !== false; } body.hidden = !on.checked; },
+      value: () => (on.checked ? { toBranchId: branch.value, toUserId: person.value || '', settled: settled.checked } : null),
+      label() { const b = targets.branches.find((x) => x.id === branch.value); const w = b && b.people.find((x) => x.id === person.value); return b ? b.name + (w ? ' · ' + w.name : '') : ''; },
+      check() {
+        if (!on.checked) return true;
+        UI.fieldError(fBranch, branch.value ? '' : 'Choose the branch');
+        const b = targets.branches.find((x) => x.id === branch.value);
+        const needPerson = !!b && b.mine && !person.value;
+        UI.fieldError(fPerson, needPerson ? 'Choose the person who receives it' : '');
+        return !!branch.value && !needPerson;
+      },
+    };
+  };
+  // Receiving: pick the transfer that is on the way to you. pick(null) = "this is something else".
+  V.transferInBox = function (pending, o) {
+    o = o || {};
+    let chosen = null;
+    const rows = pending.rows;
+    const list = h('div', { class: 'stack', style: { gap: '8px' } });
+    const draw = () => {
+      UI.mount(list,
+        rows.map((r) => h('label', { class: 'xfer-pick' + (chosen === r ? ' sel' : '') },
+          h('input', { type: 'radio', name: 'xfer-pick', checked: chosen === r, onchange: () => { chosen = r; draw(); if (o.onPick) o.onPick(r); } }),
+          h('span', { style: { flex: 1, minWidth: 0 } }, h('b', null, RW.fmtINR2(r.amountPaise)), ' from ', h('b', null, r.from.branchName + (r.from.userName ? ' · ' + r.from.userName : '')),
+            h('small', null, (r.number ? r.number + ' · ' : '') + RW.fmtDate(r.date) + (r.particulars ? ' · ' + r.particulars : '')))) ),
+        h('label', { class: 'xfer-pick' + (chosen === null ? ' sel' : '') },
+          h('input', { type: 'radio', name: 'xfer-pick', checked: chosen === null, onchange: () => { chosen = null; draw(); if (o.onPick) o.onPick(null); } }),
+          h('span', null, 'None of these — it is some other cash', h('small', null, 'It is then counted as income / cash received as before.'))));
+    };
+    draw();
+    const el = h('div', { class: 'xfer-box' }, h('div', { class: 'row', style: { gap: '8px', marginBottom: '8px' } }, UI.icon('swap', 16), h('b', null, rows.length === 1 ? 'Money was sent to you' : rows.length + ' amounts were sent to you')),
+      h('p', { class: 'muted', style: { margin: '0 0 10px', fontSize: '12.5px' } }, 'If this entry is that money, choose it. It is then not counted as income, and the sender’s register is matched with yours.'), list);
+    return { el, get chosen() { return chosen; }, choose(r) { chosen = r; draw(); if (o.onPick) o.onPick(r); }, linkValue: () => (chosen ? { link: chosen.id } : null) };
+  };
+  // the transfer line of a voucher: "Transfer to Indore · Rahul — on the way / received"
+  V.transferLine = function (t) {
+    if (!t) return null;
+    return h('span', null, h('span', { class: 'xfer-note' }, UI.icon('swap', 12), t.dir === 'OUT' ? 'Transfer out' : 'Transfer in'), ' ', UI.transferWho(t),
+      t.dir === 'OUT' ? [' · ', t.pending ? h('b', { class: 'xfer-wait' }, 'on the way, not received yet') : h('span', { class: 'muted' }, 'received')] : (t.linkNumber ? [' · ', h('span', { class: 'muted' }, 'for ' + t.linkNumber)] : null));
+  };
+
   V.reviewBox = function (v, canReview, onDone) {
     if (v.type !== 'PAYMENT' || v.status !== 'ACTIVE') return null;
     const cls = { VALID: 'is-valid', INVALID: 'is-invalid', PENDING: 'is-pending' }[v.review];
@@ -8098,8 +8396,10 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
       const inn = v.type === 'RECEIPT', cls = v.status === 'VOID' ? 'void click' : 'click';
       const who = [o.showUser ? v.userName : null, o.showBranch ? V.branchShort(v) : null].filter(Boolean).join(' · ');
       const notCounted = v.status === 'ACTIVE' && v.counted === false; // marked "Not valid" in the audit review
-      const amt = h('td', { class: 'num keep' }, h('span', { class: (inn ? 'amt-in' : 'amt-out') + (notCounted ? ' amt-struck' : '') }, (inn ? '+ ' : '− ') + RW.fmtINR(v.amountPaise)),
-        o.compact && v.status === 'VOID' ? h('span', { class: 'sub' }, 'VOID') : null, notCounted ? h('span', { class: 'sub bad' }, 'Not valid') : null);
+      const xf = v.transfer;
+      const amt = h('td', { class: 'num keep' }, h('span', { class: (xf ? 'amt-xfer' : inn ? 'amt-in' : 'amt-out') + (notCounted ? ' amt-struck' : '') }, (inn ? '+ ' : '− ') + RW.fmtINR(v.amountPaise)),
+        o.compact && v.status === 'VOID' ? h('span', { class: 'sub' }, 'VOID') : null, notCounted ? h('span', { class: 'sub bad' }, 'Not valid') : null,
+        xf ? h('span', { class: 'sub' }, h('span', { class: 'xfer-note' }, UI.icon('swap', 11), xf.dir === 'OUT' ? (xf.pending ? 'Transfer · on the way' : 'Transfer out') : 'Transfer in')) : null);
       const tr = h('tr', { class: cls, tabindex: 0, onclick: () => open(v), onkeydown: (e) => { if (e.key === 'Enter') open(v); } });
       if (sel) {
         const cb = h('input', { type: 'checkbox', 'aria-label': 'Select ' + v.label });
@@ -8113,7 +8413,7 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
         tr.appendChild(amt);
       } else {
         tr.appendChild(h('td', { class: 'keep' }, V.vno(v), h('span', { class: 'sub' }, RW.fmtDate(v.date))));
-        tr.appendChild(h('td', { class: 'hide-m' }, UI.typeBadge(v.type, v.kind)));
+        tr.appendChild(h('td', { class: 'hide-m' }, UI.typeBadge(v.type, v.kind, v.transfer)));
         tr.appendChild(h('td', { class: 'trunc full', 'data-label': inn ? 'Received from' : 'Paid to' }, v.partyName, h('span', { class: 'sub' }, v.particulars)));
         if (o.showUser) tr.appendChild(h('td', { class: 'hide-m nowrap' }, v.userName));
         if (o.showBranch) tr.appendChild(h('td', { class: 'hide-m nowrap' }, V.branchShort(v)));
@@ -8375,10 +8675,16 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
     const nums = (x, bold) => [
       cell('Cash In', h(bold ? 'b' : 'span', { class: 'amt-in' }, RW.fmtINR(x.inPaise))),
       cell('Cash Out', h(bold ? 'b' : 'span', { class: 'amt-out' }, RW.fmtINR(x.outPaise))),
+      xferCell(x, bold),
       cell('Net', h(bold ? 'b' : 'span', { class: x.netPaise < 0 ? 'neg' : '' }, RW.fmtINR(x.netPaise)), 'hide-m'),
       cell('Balance', h('b', { class: x.balancePaise < 0 ? 'neg' : '' }, RW.fmtINR(x.balancePaise))),
     ];
-    const list = h('div', { class: 'bk' }, h('div', { class: 'bk-head' }, h('span', null, 'Account'), h('span', { class: 'num' }, 'Cash In'), h('span', { class: 'num' }, 'Cash Out'), h('span', { class: 'num hide-m' }, 'Net'), h('span', { class: 'num' }, 'Balance')));
+    // money sent to / received from other branches: kept out of Cash In / Out, but part of the balance
+    const xferCell = (x, bold) => {
+      const n = (x.xInPaise || 0) - (x.xOutPaise || 0);
+      return cell('Transfers', n ? h(bold ? 'b' : 'span', { class: 'amt-xfer', title: 'Received ' + RW.fmtINR(x.xInPaise || 0) + ' · sent ' + RW.fmtINR(x.xOutPaise || 0) }, (n > 0 ? '+ ' : '− ') + RW.fmtINR(Math.abs(n))) : h('span', { class: 'muted' }, '–'), n ? '' : 'hide-m');
+    };
+    const list = h('div', { class: 'bk' }, h('div', { class: 'bk-head' }, h('span', null, 'Account'), h('span', { class: 'num' }, 'Cash In'), h('span', { class: 'num' }, 'Cash Out'), h('span', { class: 'num' }, 'Transfers'), h('span', { class: 'num hide-m' }, 'Net'), h('span', { class: 'num' }, 'Balance')));
     B.branches.forEach((b) => {
       const slot = V.slotFor(b.id);
       const label = h('span', { class: 'bk-n' }, h('b', null, h('i', { class: 'bk-dot', style: { background: 'var(--c' + slot + ')' } }), b.name),
@@ -8481,10 +8787,12 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
     // ----- persistent pieces (built once, updated on live refresh)
     const charts = chartCards();
     const recent = recentCard(mgmt ? 'Recent vouchers' : 'My recent vouchers', mgmt ? '#/all-vouchers' : '#/vouchers');
-    let K = null, booksHost = null, donutCard = null, rangeChips = null, periodsHost = null;
+    let K = null, booksHost = null, donutCard = null, rangeChips = null, periodsHost = null, transitHost = null;
 
     function build(d) {
       UI.clear(body);
+      transitHost = h('div');
+      body.appendChild(transitHost);
       if (!mgmt) {
         K = {
           bal: V.kpi({ label: 'Current Cash Balance', icon: 'wallet', money: true, signed: true, hero: true, sub: 'Cash in hand' }),
@@ -8526,13 +8834,30 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
     const chipName = (b) => { const n = V.branchShort(b); return b.isMain && n.toLowerCase() !== 'main' ? n + ' (Main)' : n; };
     function setScope(v) { scope = v; lsSet(v); first = true; load(false); }
 
+    // money that was sent but is not received yet: staff see what to receive, the owner sees what is on the road
+    function paintTransit(d) {
+      const t = d.transit;
+      if (!transitHost) return;
+      if (!t || !t.count) { UI.clear(transitHost); return; }
+      const line = (x) => h('div', { class: 'xfer-item' },
+        h('span', null, h('b', null, RW.fmtINR2(x.amountPaise)), ' ', x.from.branchName + (x.from.userName ? ' · ' + x.from.userName : ''), ' → ', x.to.branchName + (x.to.userName ? ' · ' + x.to.userName : ''), h('span', { class: 'muted' }, ' · ' + (x.number ? x.number + ' · ' : '') + RW.fmtDate(x.date))),
+        x.mineToReceive && app.canCreate ? h('a', { class: 'btn btn-primary btn-sm', href: '#/vouchers/new?type=RECEIVED&transfer=' + x.id }, UI.icon('check', 14), 'I received it') : x.sentByMe ? h('span', { class: 'badge badge-amber' }, 'Waiting to be received') : null);
+      const mine = t.items.filter((x) => x.mineToReceive).length;
+      UI.mount(transitHost, h('div', { class: 'callout warn m1', style: { flexDirection: 'column', gap: '10px' } },
+        h('div', { class: 'row', style: { gap: '8px' } }, UI.icon('swap', 16), h('b', null, mine ? 'Money was sent to you — ' + mine + ' to receive' : RW.fmtINR2(t.paise) + ' on the way'), h('span', { class: 'muted' }, ' · ' + t.count + ' transfer' + (t.count === 1 ? '' : 's') + ' sent, not received yet')),
+        h('div', { class: 'xfer-strip' }, t.items.map(line)),
+        mgmt ? h('small', { class: 'muted' }, 'Until the receiving branch adds it as Cash Received, this money is in nobody’s register. It is not income or expense. ', h('a', { class: 'link', href: '#/all-vouchers?transfer=PENDING' }, 'See all')) : null));
+    }
+
     function fill(d, animate) {
+      paintTransit(d);
       const day = d.charts.daily14, tdy = day[day.length - 1], yst = day[day.length - 2] || { inPaise: 0, outPaise: 0, count: 0 };
       const ser = (f) => day.map(f);
       if (!mgmt) {
         K.bal.set(d.self.balancePaise, 'Opening ' + RW.fmtINR(d.self.openingPaise) + ' · ' + (d.self.registerId || ''), d.charts.balanceTrend30.map((x) => x.balancePaise));
-        K.in.set(d.periods.today.inPaise, 'Yesterday ' + RW.fmtINR(yst.inPaise), ser((x) => x.inPaise));
-        K.out.set(d.periods.today.outPaise, 'Yesterday ' + RW.fmtINR(yst.outPaise), ser((x) => x.outPaise));
+        const xt = d.periods.today;
+        K.in.set(xt.inPaise, xt.xInPaise ? 'Yesterday ' + RW.fmtINR(yst.inPaise) + ' · + ' + RW.fmtINR(xt.xInPaise) + ' transfer (not income)' : 'Yesterday ' + RW.fmtINR(yst.inPaise), ser((x) => x.inPaise));
+        K.out.set(xt.outPaise, xt.xOutPaise ? 'Yesterday ' + RW.fmtINR(yst.outPaise) + ' · ' + RW.fmtINR(xt.xOutPaise) + ' transfer sent (not expense)' : 'Yesterday ' + RW.fmtINR(yst.outPaise), ser((x) => x.outPaise));
         K.net.set(d.periods.today.netPaise, 'Yesterday ' + RW.fmtINR(yst.inPaise - yst.outPaise), ser((x) => x.inPaise - x.outPaise));
         K.cnt.set(d.periods.today.count, 'Yesterday ' + yst.count, ser((x) => x.count));
         UI.mount(periodsHost, ['week', 'month', 'year'].map((k) => {
@@ -8542,8 +8867,9 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
         }));
       } else {
         const k = d.kpis, scoped = !!(d.scope && d.scope.branchId), nm = scoped ? d.scope.name : '';
-        K.in.set(k.inPaise, d.kpiRange.label, ser((x) => x.inPaise)); K.out.set(k.outPaise, d.kpiRange.label, ser((x) => x.outPaise)); K.net.set(k.netPaise, d.kpiRange.label);
-        K.bal.set(k.balancePaise, scoped ? 'Registers of ' + nm : 'Across all registers', d.charts.balanceTrend30.map((x) => x.balancePaise)); if (app.isAdmin) K.os.set(k.outstandingPaise || 0, scoped ? 'Receivable + payable · this branch' : 'Receivable + payable');
+        const xin = k.xInPaise ? ' · not counted: ' + RW.fmtINR(k.xInPaise) + ' transfers received' : '', xout = k.xOutPaise ? ' · not counted: ' + RW.fmtINR(k.xOutPaise) + ' transfers sent' : '';
+        K.in.set(k.inPaise, d.kpiRange.label + xin, ser((x) => x.inPaise)); K.out.set(k.outPaise, d.kpiRange.label + xout, ser((x) => x.outPaise)); K.net.set(k.netPaise, d.kpiRange.label);
+        K.bal.set(k.balancePaise, (scoped ? 'Registers of ' + nm : 'Across all registers') + (d.transit && d.transit.paise ? ' · + ' + RW.fmtINR(d.transit.paise) + ' on the way' : ''), d.charts.balanceTrend30.map((x) => x.balancePaise)); if (app.isAdmin) K.os.set(k.outstandingPaise || 0, scoped ? 'Receivable + payable · this branch' : 'Receivable + payable');
         K.cnt.set(k.count, d.kpiRange.label); K.users.set(k.activeUsers, scoped ? 'In this branch' : 'Can sign in today'); if (K.br) K.br.set(k.activeBranches);
         UI.mount(booksHost,
           h('div', { class: 'card-h' }, h('div', null, h('h3', null, scoped ? 'Accounts of ' + nm : app.seesAll ? 'Branch-wise accounts' : 'Accounts of your branch'),
@@ -8647,7 +8973,7 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
   // Builds a filter bar + table + pager. `scope` = 'mine' | 'all'.
   function listPage(root, p, app, scope) {
     const all = scope === 'all';
-    const st = { page: 1, pageSize: 25, sort: 'date_desc', f: { status: '', type: '', kind: '', review: '', branchId: all ? (p.q.branch || '') : '', userId: '', from: '', to: '', q: '', minAmount: '', maxAmount: '' }, preset: 'all', busy: false };
+    const st = { page: 1, pageSize: 25, sort: 'date_desc', f: { status: '', type: '', kind: '', review: '', transfer: ['ANY', 'NONE', 'PENDING'].includes(p.q.transfer) ? p.q.transfer : '', branchId: all ? (p.q.branch || '') : '', userId: '', from: '', to: '', q: '', minAmount: '', maxAmount: '' }, preset: 'all', busy: false };
     if (p.q.type === 'PAYMENT' || p.q.type === 'RECEIPT') st.f.type = p.q.type;
     if (p.q.type === 'RECEIVED') { st.f.kind = 'RECEIVED'; }
     if (p.q.review === 'PENDING' || p.q.review === 'VALID' || p.q.review === 'INVALID') st.f.review = p.q.review;
@@ -8657,6 +8983,7 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
     const mkInput = (type, attrs) => h('input', Object.assign({ type }, attrs || {}));
     const q = mkInput('search', { placeholder: 'Voucher no., party, amount, user…', autocomplete: 'off' });
     const type = UI.select([{ value: '', label: 'All types' }, { value: 'PAYMENT', label: 'Cash Payment' }, { value: 'RECEIPT', label: 'Cash Receipt' }, { value: 'RECEIVED', label: 'Cash Received' }], st.f.kind === 'RECEIVED' ? 'RECEIVED' : st.f.type);
+    const transfer = UI.select([{ value: '', label: 'Everything' }, { value: 'NONE', label: 'Without branch transfers' }, { value: 'ANY', label: 'Only branch transfers' }, { value: 'PENDING', label: 'Transfers on the way' }], st.f.transfer);
     const review = UI.select([{ value: '', label: 'All' }, { value: 'PENDING', label: 'To review' }, { value: 'VALID', label: 'Valid' }, { value: 'INVALID', label: 'Not valid' }], st.f.review);
     const status = UI.select([{ value: '', label: 'Active + Void' }, { value: 'ACTIVE', label: 'Active (locked)' }, { value: 'VOID', label: 'Voided' }].concat(app.isAdmin && all ? [{ value: 'DELETED', label: 'Deleted' }] : []), st.f.status);
     const branch = UI.select([{ value: '', label: 'All branches' }], st.f.branchId);
@@ -8702,7 +9029,7 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
       const fReason = UI.field('Reason', reason);
       const phrase = h('input', { type: 'text', placeholder: 'DELETE ALL', autocomplete: 'off', autocapitalize: 'characters' });
       const fPhrase = UI.field('Type DELETE ALL to confirm', phrase);
-      const net = last.totals.netPaise;
+      const net = last.totals.movePaise !== undefined ? last.totals.movePaise : last.totals.netPaise;
       UI.modal({ title: 'Delete ' + n + ' voucher' + (n === 1 ? '' : 's') + ' permanently', size: 'sm',
         body: h('div', { class: 'stack', style: { gap: '12px' } },
           h('div', { class: 'confirm-body' }, h('div', { class: 'confirm-ic danger' }, UI.icon('trash', 22)), h('p', null, h('b', null, 'All ' + n + ' voucher' + (n === 1 ? '' : 's')), ' matching the current filters (every page, not only the ones you see) will be erased for good, with their receipt photos, and removed from every cash register (net effect on cash: ' + RW.fmtINR(Math.abs(net)) + (net < 0 ? ' more' : ' less') + '). Voucher numbers are not reused. A short summary stays in the audit log.')),
@@ -8740,6 +9067,7 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
     const bar = h('div', { class: 'bar-filters' },
       UI.field('Search', q, { class: 'wide' }),
       UI.field('Type', type),
+      UI.field('Branch transfers', transfer),
       UI.field('Status', status),
       all ? UI.field('Audit review', review) : null,
       all && app.seesAll ? UI.field('Branch', branch) : null,
@@ -8750,16 +9078,16 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
       h('button', { class: 'btn btn-ghost btn-sm', type: 'button', style: { height: '38px' }, onclick: reset }, UI.icon('x', 14), 'Clear'));
 
     const syncF = () => {
-      st.f.q = q.value.trim(); st.f.type = type.value === 'RECEIVED' ? '' : type.value; st.f.kind = type.value === 'RECEIVED' ? 'RECEIVED' : type.value === 'RECEIPT' ? 'VOUCHER' : ''; st.f.review = review.value; st.f.status = status.value; st.f.branchId = branch.value; st.f.userId = user.value;
+      st.f.q = q.value.trim(); st.f.type = type.value === 'RECEIVED' ? '' : type.value; st.f.kind = type.value === 'RECEIVED' ? 'RECEIVED' : type.value === 'RECEIPT' ? 'VOUCHER' : ''; st.f.review = review.value; st.f.transfer = transfer.value; st.f.status = status.value; st.f.branchId = branch.value; st.f.userId = user.value;
       st.f.from = from.value; st.f.to = to.value; st.f.minAmount = minA.value; st.f.maxAmount = maxA.value; st.sort = sort.value;
     };
     function reset() {
-      [q, from, to, minA, maxA].forEach((i) => { i.value = ''; }); type.value = ''; review.value = ''; status.value = ''; branch.value = ''; user.value = ''; sort.value = 'date_desc';
+      [q, from, to, minA, maxA].forEach((i) => { i.value = ''; }); type.value = ''; transfer.value = ''; review.value = ''; status.value = ''; branch.value = ''; user.value = ''; sort.value = 'date_desc';
       chips.set('all'); st.preset = 'all'; st.page = 1; load();
     }
     const refilter = UI.debounce(() => { st.page = 1; load(); }, 260);
     q.addEventListener('input', refilter);
-    [type, review, status, user, sort, minA, maxA].forEach((i) => i.addEventListener('change', () => { st.page = 1; load(); }));
+    [type, transfer, review, status, user, sort, minA, maxA].forEach((i) => i.addEventListener('change', () => { st.page = 1; load(); }));
     [from, to].forEach((i) => i.addEventListener('change', () => { chips.set('custom'); st.preset = 'custom'; st.page = 1; load(); }));
     branch.addEventListener('change', async () => { await fillUsers(); st.page = 1; load(); });
 
@@ -8785,6 +9113,7 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
           h('span', { class: 'amt-in' }, 'In ', h('b', null, RW.fmtINR(r.totals.inPaise))),
           h('span', { class: 'amt-out' }, 'Out ', h('b', null, RW.fmtINR(r.totals.outPaise))),
           h('span', null, 'Net ', h('b', { class: r.totals.netPaise < 0 ? 'neg' : '' }, RW.fmtINR(r.totals.netPaise))),
+          r.totals.xInPaise || r.totals.xOutPaise ? h('span', { class: 'amt-xfer', title: 'Money moved between branches: not counted as income or expense' }, UI.icon('swap', 13), ' Transfers in ', h('b', null, RW.fmtINR(r.totals.xInPaise)), ' · out ', h('b', null, RW.fmtINR(r.totals.xOutPaise))) : null,
           r.totals.notValidCount ? h('span', { class: 'sub bad', title: 'Marked not valid in the audit review — shown, but not counted as expense' }, UI.icon('ban', 13), ' ' + RW.fmtINR(r.totals.notValidPaise) + ' not counted (' + r.totals.notValidCount + ' not valid)') : null);
         if (sel) { for (const id of Array.from(sel.map.keys())) if (!r.rows.some((v) => v.id === id)) sel.map.delete(id); sel.map.forEach((_, id) => sel.map.set(id, r.rows.find((v) => v.id === id))); }
         UI.mount(body, r.rows.length
@@ -8821,7 +9150,7 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
         const period = (st.f.from ? RW.fmtDate(st.f.from) : 'Beginning') + ' to ' + (st.f.to ? RW.fmtDate(st.f.to) : RW.fmtDate(app.today));
         if (kind === 'csv') UI.download(RW.buildCsv(RW.VOUCHER_COLUMNS, r.rows), 'vouchers-' + stamp + '.csv', 'text/csv;charset=utf-8');
         else if (kind === 'xlsx') {
-          UI.download(await RW.buildXlsx([{ name: 'Vouchers', title: 'Voucher Register — Ravi Water Flow Pump', subtitle: ['Scope: ' + scopeName, 'Period: ' + period, 'Generated by ' + r.generatedBy + ' on ' + RW.fmtDateTime(r.generatedAt)], columns: RW.VOUCHER_COLUMNS, rows: r.rows, totals: { label: 'TOTAL', sum: ['cashIn', 'cashOut'] } }]),
+          UI.download(await RW.buildXlsx([{ name: 'Vouchers', title: 'Voucher Register — Ravi Water Flow Pump', subtitle: ['Scope: ' + scopeName, 'Period: ' + period, 'Generated by ' + r.generatedBy + ' on ' + RW.fmtDateTime(r.generatedAt)], columns: RW.VOUCHER_COLUMNS, rows: r.rows, totals: { label: 'TOTAL', sum: ['cashIn', 'cashOut', 'transferIn', 'transferOut'] } }]),
             'vouchers-' + stamp + '.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         } else {
           await RW.loadFonts();
@@ -8829,9 +9158,9 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
           UI.download(await RW.buildTableDoc({
             title: 'Voucher Register', subtitle: 'Filters applied', landscape: true, company: app.settings.company,
             identity: [{ label: 'Scope', value: scopeName }, { label: 'Period', value: period }, { label: 'Generated for', value: app.user.fullName, sub: UI.roleName(app.user.role) }],
-            cards: [{ label: 'Entries counted', value: String(r.totals.count) + (r.totals.notValidCount ? ' (+' + r.totals.notValidCount + ' not valid)' : '') }, { label: 'Cash Inflow', value: '₹' + m(r.totals.inPaise), tone: 'in' }, { label: 'Cash Outflow', value: '₹' + m(r.totals.outPaise), tone: 'out' }, { label: 'Net', value: '₹' + m(r.totals.netPaise), tone: 'accent' }],
-            columns: [{ label: 'Voucher No.', w: 24 }, { label: 'Date', w: 22 }, { label: 'Branch', w: 34, wrap: true }, { label: 'User', w: 30, wrap: true }, { label: 'Party', w: 52, wrap: true }, { label: 'Particulars', w: 74, wrap: true }, { label: 'Cash In (₹)', w: 26, align: 'right' }, { label: 'Cash Out (₹)', w: 26, align: 'right' }, { label: 'Status', w: 16 }, { label: 'Audit review', w: 20 }],
-            rows: r.rows.map((v) => ({ cells: [v.number, RW.fmtDate(v.date), v.branchCode ? v.branchCode.charAt(0) + v.branchCode.slice(1).toLowerCase() : v.branch, v.user, v.party, v.particulars, v.cashIn ? RW.fmtINR2(Math.round(v.cashIn * 100), { symbol: false }) : '', v.cashOut ? RW.fmtINR2(Math.round(v.cashOut * 100), { symbol: false }) : '', v.status, v.review], colors: v.status === 'VOID' || v.review === 'Not valid' ? Array(10).fill('#98A4B3') : [null, null, null, null, null, null, RW.COLORS.inflow, RW.COLORS.outflow, null, null] })),
+            cards: [{ label: 'Entries counted', value: String(r.totals.count) + (r.totals.notValidCount ? ' (+' + r.totals.notValidCount + ' not valid)' : '') }, { label: 'Cash Inflow', value: '₹' + m(r.totals.inPaise), tone: 'in' }, { label: 'Cash Outflow', value: '₹' + m(r.totals.outPaise), tone: 'out' }, { label: 'Net', value: '₹' + m(r.totals.netPaise), tone: 'accent' }].concat(r.totals.xInPaise || r.totals.xOutPaise ? [{ label: 'Transfers in / out (not counted)', value: '₹' + m(r.totals.xInPaise) + ' / ₹' + m(r.totals.xOutPaise) }] : []),
+            columns: [{ label: 'Voucher No.', w: 24 }, { label: 'Date', w: 22 }, { label: 'Branch', w: 34, wrap: true }, { label: 'User', w: 30, wrap: true }, { label: 'Party', w: 52, wrap: true }, { label: 'Particulars', w: 56, wrap: true }, { label: 'Cash In (₹)', w: 26, align: 'right' }, { label: 'Cash Out (₹)', w: 26, align: 'right' }, { label: 'Transfer (₹)', w: 26, align: 'right' }, { label: 'Status', w: 16 }, { label: 'Audit review', w: 20 }],
+            rows: r.rows.map((v) => ({ cells: [v.number, RW.fmtDate(v.date), v.branchCode ? v.branchCode.charAt(0) + v.branchCode.slice(1).toLowerCase() : v.branch, v.user, v.party, v.particulars, v.cashIn ? RW.fmtINR2(Math.round(v.cashIn * 100), { symbol: false }) : '', v.cashOut ? RW.fmtINR2(Math.round(v.cashOut * 100), { symbol: false }) : '', v.transferIn ? '+ ' + RW.fmtINR2(Math.round(v.transferIn * 100), { symbol: false }) : v.transferOut ? '− ' + RW.fmtINR2(Math.round(v.transferOut * 100), { symbol: false }) : '', v.status, v.review], colors: v.status === 'VOID' || v.review === 'Not valid' ? Array(11).fill('#98A4B3') : [null, null, null, null, null, null, RW.COLORS.inflow, RW.COLORS.outflow, null, null, null] })),
             generatedBy: r.generatedBy, generatedAt: r.generatedAt, branchName: app.branch.name,
           }), 'vouchers-' + stamp + '.pdf', 'application/pdf');
         }
@@ -8905,6 +9234,40 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
     const partsLabel = fParts.querySelector('label');
     fAmount.appendChild(words);
 
+    /* ------------------------------------------------------------ branch transfers
+     * Payment: "this money goes to another branch / person" (not an expense). Cash Received / Receipt: "this is money a branch sent me" (not income).
+     * Both lists come from the server; offline they are simply not offered. */
+    const xfer = { out: null, inn: null, picked: null, autoParty: false };
+    const xferHost = h('div');
+    const xferActive = () => (st.type === 'PAYMENT' ? !!(xfer.out && xfer.out.isOn()) : !!xfer.picked);
+    function drawTransfer() {
+      UI.mount(xferHost, st.type === 'PAYMENT' ? (xfer.out ? xfer.out.el : null) : (xfer.inn ? xfer.inn.el : null));
+      applyTransfer();
+    }
+    function applyTransfer() {
+      const outOn = st.type === 'PAYMENT' && xfer.out && xfer.out.isOn(), inPick = st.type !== 'PAYMENT' ? xfer.picked : null;
+      if (outOn) { party.value = xfer.out.label(); xfer.autoParty = true; }
+      else if (inPick) { party.value = inPick.from.branchName + (inPick.from.userName ? ' · ' + inPick.from.userName : ''); xfer.autoParty = true; }
+      else if (xfer.autoParty) { party.value = ''; xfer.autoParty = false; }
+      party.readOnly = !!(outOn || inPick); amount.readOnly = !!inPick;
+      if (inPick && amount.value.replace(/,/g, '') !== String(inPick.amountPaise / 100)) { amount.value = String(inPick.amountPaise / 100); amount.dispatchEvent(new Event('input')); }
+      partsLabel.firstChild.textContent = st.type === 'PAYMENT' ? (outOn ? 'Particulars (optional)' : 'Particulars / Payment For') : isRcvd() || inPick ? 'Particulars (optional)' : 'Particulars';
+      drawPreview();
+    }
+    async function loadTransfers() {
+      if (!RW.net.online) return;
+      try {
+        const [t, pend] = await Promise.all([RW.api.call('transfers.targets', {}), RW.api.call('transfers.pending', {})]);
+        if (t.branches.length) xfer.out = V.transferOutBox(t, { onChange: applyTransfer });
+        if (pend.rows.length) {
+          xfer.inn = V.transferInBox(pend, { onPick: (r) => { xfer.picked = r; applyTransfer(); } });
+          const want = p.q.transfer ? pend.rows.find((r) => r.id === p.q.transfer) : null;
+          if (want) { if (st.type === 'PAYMENT') { st.type = 'RECEIVED'; onType(); } xfer.inn.choose(want); }
+        }
+        drawTransfer();
+      } catch (e) { /* offline or an old server: the form works without transfers */ }
+    }
+
     /* ------------------------------------------------------------ preview */
     const previewHost = h('div');
     const draft = () => {
@@ -8933,6 +9296,9 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
       rcvdHint.hidden = !rc;
       submitBtn.lastChild.textContent = rc ? 'Save Entry' : 'Save Voucher';
       submitBtn.className = 'btn btn-lg ' + (pay ? 'btn-primary' : 'btn-primary');
+      if (!pay && xfer.out && xfer.out.isOn()) xfer.out.set(null);
+      if (pay && xfer.picked && xfer.inn) xfer.inn.choose(null);
+      drawTransfer();
       checkBalance(); drawPreview();
     }
     function checkBalance() {
@@ -8983,7 +9349,8 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
       let ok = true;
       const need = (f, cond, msg) => { fieldErr(f, cond ? '' : msg); if (!cond) ok = false; };
       need(fParty, party.value.trim().length >= 2, (st.type === 'PAYMENT' ? 'Paid To' : 'Received From') + ' is required');
-      need(fParts, isRcvd() || particulars.value.trim().length >= 3, 'Please describe the particulars (at least 3 characters)');
+      if (xfer.out && st.type === 'PAYMENT' && !xfer.out.check()) ok = false;
+      need(fParts, isRcvd() || xferActive() || particulars.value.trim().length >= 3, 'Please describe the particulars (at least 3 characters)');
       const paise = safePaise(amount.value.replace(/,/g, ''));
       need(fAmount, paise > 0, 'Enter an amount greater than 0');
       if (paise > S.maxVoucherAmountPaise) { fieldErr(fAmount, 'Amount cannot exceed ' + RW.fmtINR(S.maxVoucherAmountPaise)); ok = false; }
@@ -8991,7 +9358,11 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
       if (!ok) { const bad = UI.$('.field.has-err', root); if (bad) { bad.scrollIntoView({ behavior: 'smooth', block: 'center' }); const i = bad.querySelector('input,textarea'); if (i) i.focus({ preventScroll: true }); } }
       return ok;
     }
-    const payload = () => ({ type: isRcvd() ? 'RECEIPT' : st.type, kind: isRcvd() ? 'RECEIVED' : undefined, date: date.value, partyName: party.value.trim(), particulars: particulars.value.trim(), notes: notes.value.trim(), amount: amount.value.replace(/,/g, ''), attachments: st.atts.map((a) => ({ name: a.name, mime: a.mime, dataUrl: a.dataUrl })) });
+    const transferPayload = () => {
+      if (st.type === 'PAYMENT') { const t = xfer.out && xfer.out.value(); return t ? { toBranchId: t.toBranchId, toUserId: t.toUserId } : undefined; }
+      return xfer.picked ? { link: xfer.picked.id } : undefined;
+    };
+    const payload = () => ({ type: isRcvd() ? 'RECEIPT' : st.type, kind: isRcvd() ? 'RECEIVED' : undefined, date: date.value, partyName: party.value.trim(), particulars: particulars.value.trim(), notes: notes.value.trim(), amount: amount.value.replace(/,/g, ''), transfer: transferPayload(), attachments: st.atts.map((a) => ({ name: a.name, mime: a.mime, dataUrl: a.dataUrl })) });
 
     async function submit(thenPdf) {
       if (st.saving) return;
@@ -9001,7 +9372,7 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
       const ok = await UI.confirm({
         title: 'Save this ' + (pay ? 'payment voucher' : rc ? 'cash received entry' : 'cash receipt') + '?', icon: 'lock', ok: rc ? 'Save entry' : 'Save voucher',
         message: h('div', { class: 'stack', style: { gap: '10px' } },
-          h('dl', { class: 'kv' }, rc ? [h('dt', null, 'Entry'), h('dd', null, 'Cash Received (no voucher number)')] : null, h('dt', null, pay ? 'Paid to' : 'Received from'), h('dd', null, party.value.trim()), h('dt', null, 'Amount'), h('dd', null, h('b', null, RW.fmtINR2(paise)), h('div', { class: 'muted' }, RW.amountInWords(paise))), h('dt', null, 'Date'), h('dd', null, RW.fmtDate(date.value)), h('dt', null, 'Attachments'), h('dd', null, String(st.atts.length))),
+          h('dl', { class: 'kv' }, rc ? [h('dt', null, 'Entry'), h('dd', null, 'Cash Received (no voucher number)')] : null, h('dt', null, pay ? 'Paid to' : 'Received from'), h('dd', null, party.value.trim()), h('dt', null, 'Amount'), h('dd', null, h('b', null, RW.fmtINR2(paise)), h('div', { class: 'muted' }, RW.amountInWords(paise))), h('dt', null, 'Date'), h('dd', null, RW.fmtDate(date.value)), xferActive() ? [h('dt', null, 'Transfer'), h('dd', null, pay ? 'Sent to ' + party.value.trim() + ' — not counted as an expense' : 'Sent by ' + party.value.trim() + ' — not counted as income')] : null, h('dt', null, 'Attachments'), h('dd', null, String(st.atts.length))),
           h('div', { class: 'lockbar' }, UI.icon('lock', 15), h('span', null, 'After saving, this ' + (rc ? 'entry' : 'voucher') + ' is ', h('b', null, 'locked'), '. Only an administrator can correct it, and every change is recorded.'))),
       });
       if (!ok) return;
@@ -9013,7 +9384,8 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
           if (!e || e.code) throw e;     // validation / permission errors are shown to the user
           return await saveOffline();    // network-type failure: keep the work safe on this device
         }
-        UI.toast(r.voucher.number ? r.voucher.number + ' saved and locked.' : 'Cash received entry saved — it is added to your cash balance.', 'success', { title: r.voucher.number ? 'Voucher created' : 'Cash received saved' });
+        if (r.voucher.transfer) UI.toast(r.voucher.transfer.dir === 'OUT' ? 'Transfer saved. ' + (r.voucher.transfer.branchName || 'The branch') + ' is told and can receive it now.' : 'Transfer received and added to your cash balance.', 'success', { title: 'Transfer' });
+        else UI.toast(r.voucher.number ? r.voucher.number + ' saved and locked.' : 'Cash received entry saved — it is added to your cash balance.', 'success', { title: r.voucher.number ? 'Voucher created' : 'Cash received saved' });
         location.hash = '#/vouchers/' + r.voucher.id + (thenPdf ? '?pdf=1' : '');
       } catch (e) {
         UI.mount(errBox, UI.icon('alert', 16), h('span', null, UI.errMsg(e))); errBox.hidden = false; errBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -9037,7 +9409,7 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
 
     const form = h('form', { class: 'card', novalidate: true, onsubmit: (e) => { e.preventDefault(); submit(false); } },
       h('div', { class: 'card-b stack', style: { gap: '18px' } },
-        typeSeg, rcvdHint,
+        typeSeg, rcvdHint, xferHost,
         h('div', { class: 'form-grid' },
           fNum, fDate, fParty, h('div', { class: 'field' }, h('label', null, 'Cash register'), h('div', { class: 'vnum-auto', style: { borderStyle: 'solid' } }, UI.icon('wallet', 15), h('span', null, (app.register && app.register.id) || 'None'))),
           fParts, fAmount, h('div', { class: 'span2' }, balanceNote),
@@ -9053,7 +9425,7 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
 
     root.appendChild(V.pageHead('Create Voucher', 'Record a cash payment, a cash receipt, or cash you received. It is saved instantly to your cash register.', null, { href: '#/vouchers', label: 'My Vouchers' }));
     root.appendChild(h('div', { class: 'grid g-form' }, form, h('div', { class: 'stack form-preview' }, h('div', { class: 'row sb' }, h('b', { style: { fontSize: '13px' } }, 'Live voucher preview'), h('span', { class: 'badge badge-gray' }, 'Draft')), previewHost)));
-    onType(); drawAtts();
+    onType(); drawAtts(); loadTransfers();
     party.focus({ preventScroll: true });
     return { dispose() { offNet(); drawPreview.cancel(); } };
   }, { roles: ['USER', 'BRANCH_ADMIN', 'SUPER_ADMIN'] });
@@ -9070,7 +9442,7 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
   const { h } = UI;
 
   const ACTION_ICON = { CREATE: 'plus', EDIT: 'edit', VOID: 'ban', DELETE: 'trash', ATTACH: 'clip', ATTACH_REMOVED: 'x', PDF: 'download', REVIEW: 'check' };
-  const FIELD_LABEL = { date: 'Date', partyName: 'Party', particulars: 'Particulars', notes: 'Notes', amount: 'Amount (₹)', status: 'Status', review: 'Audit review', counted: 'Counted as expense', receivedFrom: 'Received from', kind: 'Entry', name: 'File', number: 'Number', type: 'Type' };
+  const FIELD_LABEL = { date: 'Date', partyName: 'Party', particulars: 'Particulars', notes: 'Notes', amount: 'Amount (₹)', status: 'Status', review: 'Audit review', transfer: 'Branch transfer', counted: 'Counted as expense', receivedFrom: 'Received from', kind: 'Entry', name: 'File', number: 'Number', type: 'Type' };
   const showVal = (k, v) => (k === 'counted' ? (v ? 'Yes' : 'No') : k === 'date' ? RW.fmtDate(v) : k === 'amount' ? RW.fmtINR2(Math.round(Number(v) * 100)) : String(v === null || v === undefined || v === '' ? '—' : v));
 
   RW.route('/vouchers/:id', async function (root, p, app) {
@@ -9113,15 +9485,45 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
       const words = h('div', { class: 'amount-words' }, v.amountInWords);
       amt.addEventListener('input', () => { try { words.textContent = RW.amountInWords(RW.toPaise(amt.value.replace(/,/g, ''))); } catch (e) { words.textContent = ''; } });
       const r = reasonField();
+      /* Branch transfer (main admin): mark an old entry as a transfer so it stops counting as expense / income, link it to the money that was sent, or take the mark off */
+      const xferHostEd = h('div'), xs = { out: null, sel: null, rows: [] };
+      (async () => {
+        try {
+          const t = await RW.api.call('transfers.targets', { asUserId: v.userId });
+          if (v.type === 'PAYMENT') {
+            xs.out = V.transferOutBox(t, { settledChoice: true, title: 'This payment was money sent to another branch or person (transfer)', hint: 'It then stops counting as an expense. The branch receives it by adding "Cash Received".' });
+            if (v.transfer) xs.out.set({ branchId: v.transfer.branchId, userId: v.transfer.userId, settled: v.transfer.settled });
+            UI.mount(xferHostEd, xs.out.el);
+          } else {
+            const pend = await RW.api.call('transfers.pending', { all: true });
+            const opts = [h('option', { value: '' }, 'Not a transfer — counted as income')];
+            if (v.transfer && v.transfer.link) opts.push(h('option', { value: 'link:' + v.transfer.link }, 'Linked to ' + (v.transfer.linkNumber || 'a transfer') + ' (' + UI.transferWho(v.transfer) + ')'));
+            pend.rows.forEach((x) => opts.push(h('option', { value: 'link:' + x.id }, 'Received transfer ' + (x.number || '') + ' · ' + RW.fmtINR(x.amountPaise) + ' ' + UI.transferWho({ dir: 'IN', branchName: x.from.branchName, userName: x.from.userName }) + ' → ' + x.to.branchName)));
+            t.branches.forEach((b) => opts.push(h('option', { value: 'branch:' + b.id }, 'Money from branch: ' + b.name + ' (not linked to a payment)')));
+            xs.sel = h('select', null, opts);
+            xs.sel.value = v.transfer ? (v.transfer.link ? 'link:' + v.transfer.link : 'branch:' + v.transfer.branchId) : '';
+            UI.mount(xferHostEd, h('div', { class: 'xfer-box' }, UI.field('Is this money a branch transfer?', xs.sel, { hint: 'A transfer is not income. Choose the payment it belongs to, or only the branch it came from.' })));
+          }
+        } catch (e) { /* no transfer section if the server cannot be reached */ }
+      })();
       UI.modal({
         title: 'Edit ' + v.label, size: 'md',
         body: h('div', { class: 'stack', style: { gap: '14px' } },
           h('div', { class: 'callout warn' }, UI.icon('alert', 16), h('span', null, (v.number ? 'You can also change the voucher number (it must stay unique).' : 'This entry has no voucher number.') + ' The old and new values, your name and the reason are recorded permanently.')),
           h('div', { class: 'form-grid' }, num ? UI.field('Voucher number', num, { class: 'span2', hint: 'Only the main admin can change it. Another voucher must not already use it.' }) : null, UI.field('Date', date), UI.field(v.type === 'PAYMENT' ? 'Paid To' : 'Received From', party), UI.field('Particulars', parts, { class: 'span2' }), UI.field('Amount (₹)', amt, { class: 'span2' }), h('div', { class: 'span2' }, words), UI.field('Notes', notes, { optional: true, class: 'span2' })),
-          r.f),
+          xferHostEd, r.f),
         actions: [{ label: 'Cancel' }, { label: 'Save correction', kind: 'primary', icon: 'check', keepOpen: true, onClick: async (m) => {
           if (!needReason(r)) return false;
           const patch = {};
+          if (xs.out) {
+            if (!xs.out.check()) return false;
+            const nv = xs.out.value(), cur = v.transfer;
+            if (!nv && cur) patch.transfer = null;
+            else if (nv && (!cur || cur.branchId !== nv.toBranchId || (cur.userId || '') !== (nv.toUserId || '') || !!cur.settled !== !!nv.settled)) patch.transfer = nv;
+          } else if (xs.sel) {
+            const val = xs.sel.value, cur = v.transfer ? (v.transfer.link ? 'link:' + v.transfer.link : 'branch:' + v.transfer.branchId) : '';
+            if (val !== cur) patch.transfer = !val ? null : val.startsWith('link:') ? { link: val.slice(5) } : { fromBranchId: val.slice(7) };
+          }
           if (num && num.value.trim().toUpperCase() !== v.number) patch.number = num.value;
           if (date.value !== v.date) patch.date = date.value;
           if (party.value.trim() !== v.partyName) patch.partyName = party.value;
@@ -9224,10 +9626,11 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
         h('div', { class: 'card-b' }, d.attachments.length ? h('div', { class: 'att-grid' }, d.attachments.map((a) => attTile(d, a))) : h('p', { class: 'muted' }, 'Nothing attached.'), fileIn));
 
       const info = h('div', { class: 'card' }, h('div', { class: 'card-h' }, h('h3', null, 'Details')), h('div', { class: 'card-b' }, h('dl', { class: 'kv' },
-        h('dt', null, v.kind === 'RECEIVED' ? 'Entry' : 'Voucher'), h('dd', null, v.number ? [h('b', null, v.number), ' '] : null, UI.typeBadge(v.type, v.kind), ' ', UI.statusBadge(v.status)),
+        h('dt', null, v.kind === 'RECEIVED' ? 'Entry' : 'Voucher'), h('dd', null, v.number ? [h('b', null, v.number), ' '] : null, UI.typeBadge(v.type, v.kind, v.transfer), ' ', UI.statusBadge(v.status)),
+        v.transfer ? [h('dt', null, 'Branch transfer'), h('dd', null, V.transferLine(v.transfer), h('div', { class: 'muted', style: { fontSize: '12px', marginTop: '2px' } }, 'Not counted as ' + (inn ? 'income' : 'an expense') + ' — it only moves cash between registers.'))] : null,
         v.kind === 'RECEIVED' ? [h('dt', null, 'Voucher no.'), h('dd', null, h('span', { class: 'muted' }, 'None — cash received entries are not numbered'))] : null,
         h('dt', null, inn ? 'Received from' : 'Paid to'), h('dd', null, v.partyName),
-        h('dt', null, 'Amount'), h('dd', null, h('b', { class: inn ? 'amt-in' : 'amt-out' }, (inn ? '+ ' : '− ') + RW.fmtINR2(v.amountPaise))),
+        h('dt', null, 'Amount'), h('dd', null, h('b', { class: v.transfer ? 'amt-xfer' : inn ? 'amt-in' : 'amt-out' }, (inn ? '+ ' : '− ') + RW.fmtINR2(v.amountPaise))),
         h('dt', null, 'Date'), h('dd', null, RW.fmtDate(v.date)),
         h('dt', null, 'Branch'), h('dd', null, v.branchName),
         h('dt', null, 'Cash register'), h('dd', null, v.registerId + ' · ' + v.userName),
@@ -9238,7 +9641,7 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
       const tl = h('div', { class: 'card' }, h('div', { class: 'card-h' }, h('h3', null, 'Activity timeline', h('small', null, 'Who did what, and when — history cannot be changed'))), h('div', { class: 'card-b' }, timeline(d)));
 
       UI.mount(host,
-        V.pageHead(v.label, RW.fmtDate(v.date) + ' · ' + UI.typeLabel(v.type, v.kind) + ' · ' + v.branchName, acts, back),
+        V.pageHead(v.label, RW.fmtDate(v.date) + ' · ' + UI.typeLabel(v.type, v.kind, v.transfer) + ' · ' + v.branchName, acts, back),
         h('div', { class: 'grid g-form' },
           h('div', { class: 'stack' }, lock, V.reviewBox(v, app.isSuper, () => load()), h('div', { class: 'print-area' }, V.voucherSvg(v, d.company))),
           h('div', { class: 'stack' }, info, attCard, tl)));
@@ -9268,8 +9671,8 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
 
   V.cashCards = (r) => h('div', { class: 'grid g-kpi5' },
     V.kpi({ label: 'Opening Balance', icon: 'wallet', money: true, signed: true, value: r.openingPaise, sub: 'Brought forward' }),
-    V.kpi({ label: 'Cash Inflow', icon: 'inflow', tone: 'in', money: true, value: r.inPaise, sub: r.receivedPaise ? 'incl. ' + RW.fmtINR(r.receivedPaise) + ' cash received' : 'Receipts' }),
-    V.kpi({ label: 'Cash Outflow', icon: 'outflow', tone: 'out', money: true, value: r.outPaise, sub: r.notValidCount ? 'Payments · ' + r.notValidCount + ' not valid (' + RW.fmtINR(r.notValidPaise) + ' not counted)' : 'Payments' }),
+    V.kpi({ label: 'Cash Inflow', icon: 'inflow', tone: 'in', money: true, value: r.inPaise, sub: [r.receivedPaise ? 'incl. ' + RW.fmtINR(r.receivedPaise) + ' cash received' : '', r.xInPaise ? 'incl. ' + RW.fmtINR(r.xInPaise) + ' transfer received' : ''].filter(Boolean).join(' · ') || 'Receipts' }),
+    V.kpi({ label: 'Cash Outflow', icon: 'outflow', tone: 'out', money: true, value: r.outPaise, sub: [r.notValidCount ? 'Payments · ' + r.notValidCount + ' not valid (' + RW.fmtINR(r.notValidPaise) + ' not counted)' : 'Payments', r.xOutPaise ? 'incl. ' + RW.fmtINR(r.xOutPaise) + ' transfer sent' : ''].filter(Boolean).join(' · ') }),
     V.kpi({ label: 'Closing Balance', icon: 'rupee', hero: true, money: true, signed: true, value: r.closingPaise, sub: 'Opening + In − Out' }),
     V.kpi({ label: 'Entries', icon: 'file', value: r.count, sub: [r.voidedCount ? r.voidedCount + ' voided' : '', r.notValidCount ? r.notValidCount + ' not valid' : ''].filter(Boolean).join(' · ') + ([r.voidedCount, r.notValidCount].some(Boolean) ? ' (excluded)' : 'No voided vouchers') }));
 
@@ -9282,10 +9685,10 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
     const more = h('div', { style: { textAlign: 'center', padding: '12px' } });
     const row = (x) => h('tr', { class: 'click', tabindex: 0, onclick: () => (location.hash = '#/vouchers/' + x.id), onkeydown: (e) => { if (e.key === 'Enter') location.hash = '#/vouchers/' + x.id; } },
       h('td', { class: 'keep nowrap' }, V.vno(x), h('span', { class: 'sub' }, RW.fmtDate(x.date))),
-      h('td', { class: 'hide-m nowrap' }, UI.typeBadge(x.type, x.kind)),
-      h('td', { class: 'trunc full', 'data-label': x.type === 'RECEIPT' ? 'Received from' : 'Paid to' }, x.partyName, h('span', { class: 'sub' }, x.particulars)),
-      h('td', { class: 'num', 'data-label': 'Cash in' }, x.inPaise ? h('span', { class: 'amt-in' }, money(x.inPaise)) : h('span', { class: 'muted' }, '–')),
-      h('td', { class: 'num', 'data-label': 'Cash out' }, x.notValid ? h('span', { class: 'sub bad' }, 'Not valid · ', h('s', null, money(x.amountPaise))) : x.outPaise ? h('span', { class: 'amt-out' }, money(x.outPaise)) : h('span', { class: 'muted' }, '–')),
+      h('td', { class: 'hide-m nowrap' }, UI.typeBadge(x.type, x.kind, x.transfer)),
+      h('td', { class: 'trunc full', 'data-label': x.type === 'RECEIPT' ? 'Received from' : 'Paid to' }, x.partyName, h('span', { class: 'sub' }, x.particulars), x.transfer ? h('span', { class: 'sub' }, V.transferLine(x.transfer)) : null),
+      h('td', { class: 'num', 'data-label': 'Cash in' }, x.inPaise ? h('span', { class: x.transfer ? 'amt-xfer' : 'amt-in' }, money(x.inPaise)) : h('span', { class: 'muted' }, '–')),
+      h('td', { class: 'num', 'data-label': 'Cash out' }, x.notValid ? h('span', { class: 'sub bad' }, 'Not valid · ', h('s', null, money(x.amountPaise))) : x.outPaise ? h('span', { class: x.transfer ? 'amt-xfer' : 'amt-out' }, money(x.outPaise)) : h('span', { class: 'muted' }, '–')),
       h('td', { class: 'num keep', 'data-label': 'Balance' }, h('b', { class: x.balancePaise < 0 ? 'neg' : '' }, money(x.balancePaise))));
     const next = () => {
       r.rows.slice(shown, shown + CH).forEach((x) => body.appendChild(row(x)));
@@ -9872,6 +10275,10 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
   const CH = () => RW.charts;
   const money2 = (rupees) => RW.fmtINR2(Math.round(Number(rupees || 0) * 100), { symbol: false });
 
+    // money moved between branches in the period: shown beside the report, never inside Cash In / Cash Out
+    const xferNet = (i, o) => { const n = (i || 0) - (o || 0); return n ? h('span', { class: 'amt-xfer', title: 'Received ' + RW.fmtINR(i || 0) + ' · sent ' + RW.fmtINR(o || 0) }, (n > 0 ? '+ ' : '− ') + RW.fmtINR(Math.abs(n))) : h('span', { class: 'muted' }, '–'); };
+    const xferNote = (r) => (r.xInPaise || r.xOutPaise ? h('div', { class: 'callout' }, UI.icon('swap', 16), h('span', null, h('b', null, 'Branch transfers: '), 'received ', h('b', null, RW.fmtINR(r.xInPaise || 0)), ' · sent ', h('b', null, RW.fmtINR(r.xOutPaise || 0)), '. Money moved between branches or people is not income or expense, so it is not in Cash In / Cash Out above.')) : null);
+
   /* Generic export of a report table. spec = { title, file, subtitle:[...], identity, cards, columns:[{key,label,type,width}], rows, totals:{label,sum:[keys]} } */
   V.exportRows = async function (app, kind, spec) {
     const stamp = RW.today().replace(/-/g, '');
@@ -9947,13 +10354,14 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
       const host = h('div');
       UI.mount(body, h('div', { class: 'stack' },
         h('div', { class: 'grid g4' }, V.kpi({ label: 'Cash In', icon: 'inflow', tone: 'in', money: true, value: r.inPaise, sub: r.range.label }), V.kpi({ label: 'Cash Out', icon: 'outflow', tone: 'out', money: true, value: r.outPaise, sub: r.range.label }), V.kpi({ label: 'Net', icon: 'scale', money: true, signed: true, value: r.netPaise, sub: r.netPaise >= 0 ? 'Surplus' : 'Deficit' }), V.kpi({ label: 'Vouchers', icon: 'file', value: r.count, sub: 'Active only' })),
+        xferNote(r),
         h('div', { class: 'card' }, h('div', { class: 'card-h' }, h('div', null, h('h3', null, 'Cash inflow vs outflow'), h('small', null, r.range.label + (many ? ' · by month' : ' · by day')))), h('div', { class: 'card-b' }, host))));
       const common = { labels: ser.map((x) => x.label), fullLabels: ser.map((x) => (many ? x.label : RW.fmtDate(x.date))), series: [{ name: 'Cash In', values: ser.map((x) => x.inPaise), slot: 1 }, { name: 'Cash Out', values: ser.map((x) => x.outPaise), slot: 2 }], height: 260, ariaLabel: 'Cash inflow versus outflow' };
       if (ser.length > 31 && !many) CH().line(host, Object.assign(common, { area: false })); else CH().bars(host, common);
       const branchName = branchSel.value ? branchSel.options[branchSel.selectedIndex].textContent : (app.seesAll ? 'All branches' : app.branch.name);
       lastSpec = { title: 'Cash Report', file: 'cash-report', sheet: 'Cash report', subtitle: ['Scope: ' + branchName, 'Period: ' + rangeText()],
         identity: [{ label: 'Scope', value: branchName }, { label: 'Period', value: rangeText() }, { label: 'Generated for', value: app.user.fullName }],
-        cards: [{ label: 'Cash In', value: '₹' + money2(r.inPaise / 100), tone: 'in' }, { label: 'Cash Out', value: '₹' + money2(r.outPaise / 100), tone: 'out' }, { label: 'Net', value: '₹' + money2(r.netPaise / 100), tone: 'accent' }, { label: 'Vouchers', value: String(r.count) }],
+        cards: [{ label: 'Cash In', value: '₹' + money2(r.inPaise / 100), tone: 'in' }, { label: 'Cash Out', value: '₹' + money2(r.outPaise / 100), tone: 'out' }, { label: 'Net', value: '₹' + money2(r.netPaise / 100), tone: 'accent' }, { label: 'Vouchers', value: String(r.count) }].concat(r.xInPaise || r.xOutPaise ? [{ label: 'Transfers in / out (not counted)', value: '₹' + money2(r.xInPaise / 100) + ' / ₹' + money2(r.xOutPaise / 100) }] : []),
         columns: [{ key: 'label', label: many ? 'Month' : 'Date', width: 30 }, { key: 'count', label: 'Vouchers', type: 'int', width: 18 }, { key: 'cashIn', label: 'Cash In (₹)', type: 'money', width: 28 }, { key: 'cashOut', label: 'Cash Out (₹)', type: 'money', width: 28 }, { key: 'net', label: 'Net (₹)', type: 'money', width: 28 }],
         rows: ser.filter((x) => x.count).map((x) => ({ label: many ? x.label : RW.fmtDate(x.date), count: x.count, cashIn: x.inPaise / 100, cashOut: x.outPaise / 100, net: (x.inPaise - x.outPaise) / 100 })), totals: { label: 'TOTAL', sum: ['count', 'cashIn', 'cashOut', 'net'] } };
     }
@@ -9971,16 +10379,16 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
           h('div', { class: 'card' }, h('div', { class: 'card-h' }, h('div', null, h('h3', null, 'Share of cash outflow'), h('small', null, r.range.label))), h('div', { class: 'card-b' }, share))),
         h('div', { class: 'card' }, h('div', { class: 'card-h' }, h('div', null, h('h3', null, 'Net cash by month'), h('small', null, 'Last 12 months · cash in minus cash out'))), h('div', { class: 'card-b' }, trend)),
         h('div', { class: 'card' }, h('div', { class: 'card-h' }, h('h3', null, 'Branch-wise summary')), h('div', { class: 'card-b flush' }, h('div', { class: 'tbl-wrap' }, h('table', { class: 'tbl rt' },
-          h('thead', null, h('tr', null, h('th', null, 'Branch'), h('th', { class: 'num' }, 'Vouchers'), h('th', { class: 'num' }, 'Cash In'), h('th', { class: 'num' }, 'Cash Out'), h('th', { class: 'num' }, 'Net'), h('th', { class: 'num hide-m' }, 'Cash balance'), h('th', { class: 'num hide-m' }, 'Users'))),
-          h('tbody', null, rows.map((b) => h('tr', { class: app.seesAll ? 'click' : '', onclick: app.seesAll ? () => (location.hash = '#/branches/' + b.id) : null }, h('td', { class: 'keep full' }, h('i', { style: { display: 'inline-block', width: '9px', height: '9px', borderRadius: '3px', background: 'var(--c' + V.slotFor(b.id) + ')', marginRight: '8px' } }), h('b', null, V.branchShort(b)), h('span', { class: 'sub' }, b.name)), h('td', { class: 'num' }, b.count), h('td', { class: 'num' }, h('span', { class: 'amt-in' }, RW.fmtINR(b.inPaise))), h('td', { class: 'num' }, h('span', { class: 'amt-out' }, RW.fmtINR(b.outPaise))), h('td', { class: 'num' }, h('b', { class: b.netPaise < 0 ? 'neg' : '' }, RW.fmtINR(b.netPaise))), h('td', { class: 'num hide-m' }, RW.fmtINR(b.balancePaise)), h('td', { class: 'num hide-m' }, b.userCount)))),
-          h('tfoot', null, h('tr', null, h('td', null, 'Total'), h('td', { class: 'num' }, tot.c), h('td', { class: 'num' }, RW.fmtINR(tot.i)), h('td', { class: 'num' }, RW.fmtINR(tot.o)), h('td', { class: 'num' }, RW.fmtINR(tot.i - tot.o)), h('td', { class: 'num hide-m' }, RW.fmtINR(rows.reduce((a, b) => a + b.balancePaise, 0))), h('td', { class: 'num hide-m' }, rows.reduce((a, b) => a + b.userCount, 0))))))))));
+          h('thead', null, h('tr', null, h('th', null, 'Branch'), h('th', { class: 'num' }, 'Vouchers'), h('th', { class: 'num' }, 'Cash In'), h('th', { class: 'num' }, 'Cash Out'), h('th', { class: 'num' }, 'Net'), h('th', { class: 'num hide-m' }, 'Transfers'), h('th', { class: 'num hide-m' }, 'Cash balance'), h('th', { class: 'num hide-m' }, 'Users'))),
+          h('tbody', null, rows.map((b) => h('tr', { class: app.seesAll ? 'click' : '', onclick: app.seesAll ? () => (location.hash = '#/branches/' + b.id) : null }, h('td', { class: 'keep full' }, h('i', { style: { display: 'inline-block', width: '9px', height: '9px', borderRadius: '3px', background: 'var(--c' + V.slotFor(b.id) + ')', marginRight: '8px' } }), h('b', null, V.branchShort(b)), h('span', { class: 'sub' }, b.name)), h('td', { class: 'num' }, b.count), h('td', { class: 'num' }, h('span', { class: 'amt-in' }, RW.fmtINR(b.inPaise))), h('td', { class: 'num' }, h('span', { class: 'amt-out' }, RW.fmtINR(b.outPaise))), h('td', { class: 'num' }, h('b', { class: b.netPaise < 0 ? 'neg' : '' }, RW.fmtINR(b.netPaise))), h('td', { class: 'num hide-m' }, xferNet(b.xInPaise, b.xOutPaise)), h('td', { class: 'num hide-m' }, RW.fmtINR(b.balancePaise)), h('td', { class: 'num hide-m' }, b.userCount)))),
+          h('tfoot', null, h('tr', null, h('td', null, 'Total'), h('td', { class: 'num' }, tot.c), h('td', { class: 'num' }, RW.fmtINR(tot.i)), h('td', { class: 'num' }, RW.fmtINR(tot.o)), h('td', { class: 'num' }, RW.fmtINR(tot.i - tot.o)), h('td', { class: 'num hide-m' }, xferNet(rows.reduce((a, b) => a + (b.xInPaise || 0), 0), rows.reduce((a, b) => a + (b.xOutPaise || 0), 0))), h('td', { class: 'num hide-m' }, RW.fmtINR(rows.reduce((a, b) => a + b.balancePaise, 0))), h('td', { class: 'num hide-m' }, rows.reduce((a, b) => a + b.userCount, 0))))))))));
       CH().bars(cmp, { labels: rows.map((b) => V.branchShort(b)), fullLabels: rows.map((b) => b.name), series: [{ name: 'Cash In', values: rows.map((b) => b.inPaise), slot: 1 }, { name: 'Cash Out', values: rows.map((b) => b.outPaise), slot: 2 }], height: 240, ariaLabel: 'Cash in and out by branch' });
       CH().donut(share, { items: rows.map((b) => ({ label: V.branchShort(b), value: b.outPaise, slot: V.slotFor(b.id) })), valueFormat: (v) => RW.compactINR(v), center: { value: RW.compactINR(tot.o), label: 'Cash out' }, ariaLabel: 'Share of cash outflow by branch' });
       CH().line(trend, { labels: r.months, fullLabels: r.months, series: r.series.map((s) => ({ name: V.branchShort(s), values: s.netPaise, slot: V.slotFor(s.branchId) })), height: 240, area: false, ariaLabel: 'Net cash by month per branch' });
       lastSpec = { title: 'Branch-wise Report', file: 'branch-report', sheet: 'Branches', subtitle: ['Period: ' + rangeText()], identity: [{ label: 'Scope', value: app.seesAll ? 'All branches' : app.branch.name }, { label: 'Period', value: rangeText() }, { label: 'Generated for', value: app.user.fullName }],
         cards: [{ label: 'Cash In', value: '₹' + money2(tot.i / 100), tone: 'in' }, { label: 'Cash Out', value: '₹' + money2(tot.o / 100), tone: 'out' }, { label: 'Net', value: '₹' + money2((tot.i - tot.o) / 100), tone: 'accent' }, { label: 'Vouchers', value: String(tot.c) }],
-        columns: [{ key: 'branch', label: 'Branch', width: 44 }, { key: 'count', label: 'Vouchers', type: 'int', width: 18 }, { key: 'cashIn', label: 'Cash In (₹)', type: 'money', width: 28 }, { key: 'cashOut', label: 'Cash Out (₹)', type: 'money', width: 28 }, { key: 'net', label: 'Net (₹)', type: 'money', width: 28 }, { key: 'balance', label: 'Cash balance (₹)', type: 'money', width: 30 }],
-        rows: rows.map((b) => ({ branch: b.name, count: b.count, cashIn: b.inPaise / 100, cashOut: b.outPaise / 100, net: b.netPaise / 100, balance: b.balancePaise / 100 })), totals: { label: 'TOTAL', sum: ['count', 'cashIn', 'cashOut', 'net', 'balance'] } };
+        columns: [{ key: 'branch', label: 'Branch', width: 44 }, { key: 'count', label: 'Vouchers', type: 'int', width: 18 }, { key: 'cashIn', label: 'Cash In (₹)', type: 'money', width: 28 }, { key: 'cashOut', label: 'Cash Out (₹)', type: 'money', width: 28 }, { key: 'net', label: 'Net (₹)', type: 'money', width: 28 }, { key: 'transfer', label: 'Transfers received − sent (₹)', type: 'money', width: 34 }, { key: 'balance', label: 'Cash balance (₹)', type: 'money', width: 30 }],
+        rows: rows.map((b) => ({ branch: b.name, count: b.count, cashIn: b.inPaise / 100, cashOut: b.outPaise / 100, net: b.netPaise / 100, transfer: ((b.xInPaise || 0) - (b.xOutPaise || 0)) / 100, balance: b.balancePaise / 100 })), totals: { label: 'TOTAL', sum: ['count', 'cashIn', 'cashOut', 'net', 'transfer', 'balance'] } };
     }
 
     /* ----------------------------------------------------------------- user */
@@ -9993,13 +10401,14 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
       UI.mount(body, h('div', { class: 'stack' },
         h('div', { class: 'card' }, h('div', { class: 'card-b' }, V.idBlock([{ label: 'User', value: u.fullName, sub: UI.roleName(u.role) + (u.designation ? ' · ' + u.designation : '') }, { label: 'Branch', value: u.branchName }, { label: 'Cash register', value: r.registerId || '—', sub: r.currentBalancePaise === null ? '' : 'Balance ' + RW.fmtINR(r.currentBalancePaise) }, { label: 'Last activity', value: r.lastActivityAt ? RW.timeAgo(r.lastActivityAt) : 'Never', sub: r.totalVouchersAll + ' vouchers all time' }]))),
         h('div', { class: 'grid g4' }, V.kpi({ label: 'Cash In', icon: 'inflow', tone: 'in', money: true, value: r.inPaise, sub: r.range.label }), V.kpi({ label: 'Cash Out', icon: 'outflow', tone: 'out', money: true, value: r.outPaise, sub: r.range.label }), V.kpi({ label: 'Net', icon: 'scale', money: true, signed: true, value: r.netPaise }), V.kpi({ label: 'Vouchers', icon: 'file', value: r.count, sub: 'In this period' })),
+        xferNote(r),
         h('div', { class: 'card' }, h('div', { class: 'card-h' }, h('h3', null, 'Vouchers'), h('div', { class: 'row', style: { gap: '8px' } }, r.registerId ? h('a', { class: 'btn btn-ghost btn-sm', href: '#/register?user=' + u.id }, UI.icon('wallet', 14), 'Register') : null, r.registerId ? h('a', { class: 'btn btn-ghost btn-sm', href: '#/statements?user=' + u.id + '&from=' + from.value + '&to=' + to.value }, UI.icon('chart', 14), 'Statement') : null)),
           h('div', { class: 'card-b flush' }, r.rows.length ? [V.voucherTable(r.rows, {}), r.truncated ? h('p', { class: 'muted', style: { padding: '12px 18px', fontSize: '12.5px' } }, 'Showing the latest 200 vouchers. Export for the full list.') : null] : UI.empty('No vouchers in this period', '', 'file')))));
       lastSpec = { title: 'User Report — ' + u.fullName, file: 'user-report-' + UI.safeName(u.username), sheet: 'User', subtitle: ['User: ' + u.fullName + ' (' + u.username + ')', 'Branch: ' + u.branchName, 'Period: ' + rangeText()],
         identity: [{ label: 'User', value: u.fullName, sub: UI.roleName(u.role) }, { label: 'Branch', value: u.branchName }, { label: 'Period', value: rangeText() }, { label: 'Cash register', value: r.registerId || '—' }],
         cards: [{ label: 'Cash In', value: '₹' + money2(r.inPaise / 100), tone: 'in' }, { label: 'Cash Out', value: '₹' + money2(r.outPaise / 100), tone: 'out' }, { label: 'Net', value: '₹' + money2(r.netPaise / 100), tone: 'accent' }, { label: 'Vouchers', value: String(r.count) }],
-        columns: [{ key: 'number', label: 'Voucher No.', width: 22 }, { key: 'date', label: 'Date', type: 'date', width: 22 }, { key: 'party', label: 'Party', width: 46, wrap: true }, { key: 'particulars', label: 'Particulars', width: 70, wrap: true }, { key: 'cashIn', label: 'Cash In (₹)', type: 'money', width: 26 }, { key: 'cashOut', label: 'Cash Out (₹)', type: 'money', width: 26 }, { key: 'status', label: 'Status', width: 14 }, { key: 'review', label: 'Audit review', width: 16 }],
-        rows: r.rows.map((v) => ({ number: v.number || 'Cash Received', date: v.date, party: v.partyName, particulars: v.particulars, cashIn: v.counted && v.type === 'RECEIPT' ? v.amount : null, cashOut: v.counted && v.type === 'PAYMENT' ? v.amount : null, status: v.status, review: UI.reviewLabel(v.review) })), totals: { label: 'TOTAL', sum: ['cashIn', 'cashOut'] } };
+        columns: [{ key: 'number', label: 'Voucher No.', width: 22 }, { key: 'date', label: 'Date', type: 'date', width: 22 }, { key: 'party', label: 'Party', width: 46, wrap: true }, { key: 'particulars', label: 'Particulars', width: 70, wrap: true }, { key: 'cashIn', label: 'Cash In (₹)', type: 'money', width: 26 }, { key: 'cashOut', label: 'Cash Out (₹)', type: 'money', width: 26 }, { key: 'transferIn', label: 'Transfer In (₹)', type: 'money', width: 26 }, { key: 'transferOut', label: 'Transfer Out (₹)', type: 'money', width: 26 }, { key: 'status', label: 'Status', width: 14 }, { key: 'review', label: 'Audit review', width: 16 }],
+        rows: r.rows.map((v) => ({ number: v.number || 'Cash Received', date: v.date, party: v.partyName, particulars: v.particulars, cashIn: v.counted && v.type === 'RECEIPT' && !v.transfer ? v.amount : null, cashOut: v.counted && v.type === 'PAYMENT' && !v.transfer ? v.amount : null, transferIn: v.counted && v.type === 'RECEIPT' && v.transfer ? v.amount : null, transferOut: v.counted && v.type === 'PAYMENT' && v.transfer ? v.amount : null, status: v.status, review: UI.reviewLabel(v.review) })), totals: { label: 'TOTAL', sum: ['cashIn', 'cashOut', 'transferIn', 'transferOut'] } };
     }
 
     (async () => { await fillUsers(); if (!dead) load(); })();
@@ -10702,9 +11111,9 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
 
     function fillKpis(d) {
       const k = d.kpis, days = d.range.days, pv = k.prev;
-      K.cash.set(k.cashInHandPaise, k.activeBranches + ' active branches · ' + k.activeUsers + ' users', d.charts.balanceTrend30.map((x) => x.balancePaise));
-      K.in.set(k.inPaise, [pv && pctText(pv.inPct, days) || d.range.label, k.givenPaise ? RW.compactINR(k.givenPaise) + ' given to staff' : ''].filter(Boolean).join(' · '), d.charts.daily14.map((x) => x.inPaise));
-      K.out.set(k.outPaise, pv && pctText(pv.outPct, days) || d.range.label, d.charts.daily14.map((x) => x.outPaise));
+      K.cash.set(k.cashInHandPaise, [k.activeBranches + ' active branches · ' + k.activeUsers + ' users', k.transitPaise ? '+ ' + RW.compactINR(k.transitPaise) + ' on the way between branches' : ''].filter(Boolean).join(' · '), d.charts.balanceTrend30.map((x) => x.balancePaise));
+      K.in.set(k.inPaise, [pv && pctText(pv.inPct, days) || d.range.label, k.givenPaise ? RW.compactINR(k.givenPaise) + ' given to staff' : '', k.xInPaise ? RW.compactINR(k.xInPaise) + ' transfers not counted' : ''].filter(Boolean).join(' · '), d.charts.daily14.map((x) => x.inPaise));
+      K.out.set(k.outPaise, [pv && pctText(pv.outPct, days) || d.range.label, k.xOutPaise ? RW.compactINR(k.xOutPaise) + ' transfers not counted' : ''].filter(Boolean).join(' · '), d.charts.daily14.map((x) => x.outPaise));
       K.net.set(k.netPaise, d.range.label);
       K.cnt.set(k.count, pv && pctText(pv.countPct, days) || d.range.label);
       const r = d.review;
@@ -11817,7 +12226,7 @@ window.RW = window.RW || {}; window.RW.assets = {"fonts/Inter-Regular.ttf":"AAEA
   }
 
   /* ------------------------------------------------------- notifications */
-  const KIND_ICON = { VOUCHER_CREATED: 'file', RECEIPT_CREATED: 'inflow', VOUCHER_EDITED: 'edit', VOUCHER_VOID: 'ban', VOUCHER_DELETED: 'trash', VOUCHER_REVIEW: 'check', STATEMENT_GENERATED: 'chart', USER_CREATED: 'users', USER_STATUS: 'user', TOUR_PLANNED: 'map', TOUR_PENDING: 'shield', TOUR_APPROVED: 'check', TOUR_EDITED: 'edit', TOUR_CANCELLED: 'ban', SYSTEM: 'alert' };
+  const KIND_ICON = { VOUCHER_CREATED: 'file', RECEIPT_CREATED: 'inflow', VOUCHER_EDITED: 'edit', VOUCHER_VOID: 'ban', VOUCHER_DELETED: 'trash', VOUCHER_REVIEW: 'check', STATEMENT_GENERATED: 'chart', USER_CREATED: 'users', USER_STATUS: 'user', TRANSFER_SENT: 'swap', TRANSFER_RECEIVED: 'check', TOUR_PLANNED: 'map', TOUR_PENDING: 'shield', TOUR_APPROVED: 'check', TOUR_EDITED: 'edit', TOUR_CANCELLED: 'ban', SYSTEM: 'alert' };
   V.notifItem = (n, onClick) => h('div', { class: 'item' + (n.read ? '' : ' unread'), style: { alignItems: 'flex-start', opacity: n.read ? 0.78 : 1 }, onclick: onClick },
     h('span', { class: 'kpi-ic', style: { flex: 'none', background: n.important ? 'var(--accent-soft)' : undefined, color: n.important ? 'var(--accent-ink)' : undefined } }, UI.icon(KIND_ICON[n.kind] || 'bell', 15)),
     h('div', { style: { minWidth: 0 } }, h('b', { style: { fontSize: '13px' } }, n.title), h('small', { style: { whiteSpace: 'normal', lineHeight: 1.4 } }, n.body), h('small', null, RW.timeAgo(n.at) + (n.branchName ? ' · ' + n.branchName : ''))),

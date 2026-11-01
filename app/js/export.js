@@ -146,7 +146,7 @@
   RW.VOUCHER_COLUMNS = [
     { key: 'number', label: 'Voucher No.', width: 14 }, { key: 'type', label: 'Type', width: 14 }, { key: 'date', label: 'Date', width: 13, type: 'date' },
     { key: 'branch', label: 'Branch', width: 30 }, { key: 'user', label: 'User', width: 20 }, { key: 'party', label: 'Party', width: 28 },
-    { key: 'particulars', label: 'Particulars', width: 48, wrap: true }, { key: 'cashIn', label: 'Cash In (₹)', width: 14, type: 'money' }, { key: 'cashOut', label: 'Cash Out (₹)', width: 14, type: 'money' }, { key: 'amount', label: 'Voucher Amount (₹)', width: 18, type: 'money' },
+    { key: 'particulars', label: 'Particulars', width: 48, wrap: true }, { key: 'cashIn', label: 'Cash In (₹)', width: 14, type: 'money' }, { key: 'cashOut', label: 'Cash Out (₹)', width: 14, type: 'money' }, { key: 'transferIn', label: 'Transfer In (₹)', width: 15, type: 'money' }, { key: 'transferOut', label: 'Transfer Out (₹)', width: 16, type: 'money' }, { key: 'amount', label: 'Voucher Amount (₹)', width: 18, type: 'money' },
     { key: 'amountInWords', label: 'Amount in Words', width: 44 }, { key: 'status', label: 'Status', width: 10 }, { key: 'review', label: 'Audit Review', width: 14 }, { key: 'reviewReason', label: 'Review Reason', width: 30 }, { key: 'createdAt', label: 'Created At', width: 22 }, { key: 'createdBy', label: 'Created By', width: 18 }, { key: 'attachments', label: 'Attachments', width: 12, type: 'int' },
   ];
 })(typeof window !== 'undefined' ? window : globalThis);

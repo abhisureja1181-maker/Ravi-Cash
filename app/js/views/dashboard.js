@@ -39,10 +39,16 @@
     const nums = (x, bold) => [
       cell('Cash In', h(bold ? 'b' : 'span', { class: 'amt-in' }, RW.fmtINR(x.inPaise))),
       cell('Cash Out', h(bold ? 'b' : 'span', { class: 'amt-out' }, RW.fmtINR(x.outPaise))),
+      xferCell(x, bold),
       cell('Net', h(bold ? 'b' : 'span', { class: x.netPaise < 0 ? 'neg' : '' }, RW.fmtINR(x.netPaise)), 'hide-m'),
       cell('Balance', h('b', { class: x.balancePaise < 0 ? 'neg' : '' }, RW.fmtINR(x.balancePaise))),
     ];
-    const list = h('div', { class: 'bk' }, h('div', { class: 'bk-head' }, h('span', null, 'Account'), h('span', { class: 'num' }, 'Cash In'), h('span', { class: 'num' }, 'Cash Out'), h('span', { class: 'num hide-m' }, 'Net'), h('span', { class: 'num' }, 'Balance')));
+    // money sent to / received from other branches: kept out of Cash In / Out, but part of the balance
+    const xferCell = (x, bold) => {
+      const n = (x.xInPaise || 0) - (x.xOutPaise || 0);
+      return cell('Transfers', n ? h(bold ? 'b' : 'span', { class: 'amt-xfer', title: 'Received ' + RW.fmtINR(x.xInPaise || 0) + ' · sent ' + RW.fmtINR(x.xOutPaise || 0) }, (n > 0 ? '+ ' : '− ') + RW.fmtINR(Math.abs(n))) : h('span', { class: 'muted' }, '–'), n ? '' : 'hide-m');
+    };
+    const list = h('div', { class: 'bk' }, h('div', { class: 'bk-head' }, h('span', null, 'Account'), h('span', { class: 'num' }, 'Cash In'), h('span', { class: 'num' }, 'Cash Out'), h('span', { class: 'num' }, 'Transfers'), h('span', { class: 'num hide-m' }, 'Net'), h('span', { class: 'num' }, 'Balance')));
     B.branches.forEach((b) => {
       const slot = V.slotFor(b.id);
       const label = h('span', { class: 'bk-n' }, h('b', null, h('i', { class: 'bk-dot', style: { background: 'var(--c' + slot + ')' } }), b.name),
@@ -145,10 +151,12 @@
     // ----- persistent pieces (built once, updated on live refresh)
     const charts = chartCards();
     const recent = recentCard(mgmt ? 'Recent vouchers' : 'My recent vouchers', mgmt ? '#/all-vouchers' : '#/vouchers');
-    let K = null, booksHost = null, donutCard = null, rangeChips = null, periodsHost = null;
+    let K = null, booksHost = null, donutCard = null, rangeChips = null, periodsHost = null, transitHost = null;
 
     function build(d) {
       UI.clear(body);
+      transitHost = h('div');
+      body.appendChild(transitHost);
       if (!mgmt) {
         K = {
           bal: V.kpi({ label: 'Current Cash Balance', icon: 'wallet', money: true, signed: true, hero: true, sub: 'Cash in hand' }),
@@ -190,13 +198,30 @@
     const chipName = (b) => { const n = V.branchShort(b); return b.isMain && n.toLowerCase() !== 'main' ? n + ' (Main)' : n; };
     function setScope(v) { scope = v; lsSet(v); first = true; load(false); }
 
+    // money that was sent but is not received yet: staff see what to receive, the owner sees what is on the road
+    function paintTransit(d) {
+      const t = d.transit;
+      if (!transitHost) return;
+      if (!t || !t.count) { UI.clear(transitHost); return; }
+      const line = (x) => h('div', { class: 'xfer-item' },
+        h('span', null, h('b', null, RW.fmtINR2(x.amountPaise)), ' ', x.from.branchName + (x.from.userName ? ' · ' + x.from.userName : ''), ' → ', x.to.branchName + (x.to.userName ? ' · ' + x.to.userName : ''), h('span', { class: 'muted' }, ' · ' + (x.number ? x.number + ' · ' : '') + RW.fmtDate(x.date))),
+        x.mineToReceive && app.canCreate ? h('a', { class: 'btn btn-primary btn-sm', href: '#/vouchers/new?type=RECEIVED&transfer=' + x.id }, UI.icon('check', 14), 'I received it') : x.sentByMe ? h('span', { class: 'badge badge-amber' }, 'Waiting to be received') : null);
+      const mine = t.items.filter((x) => x.mineToReceive).length;
+      UI.mount(transitHost, h('div', { class: 'callout warn m1', style: { flexDirection: 'column', gap: '10px' } },
+        h('div', { class: 'row', style: { gap: '8px' } }, UI.icon('swap', 16), h('b', null, mine ? 'Money was sent to you — ' + mine + ' to receive' : RW.fmtINR2(t.paise) + ' on the way'), h('span', { class: 'muted' }, ' · ' + t.count + ' transfer' + (t.count === 1 ? '' : 's') + ' sent, not received yet')),
+        h('div', { class: 'xfer-strip' }, t.items.map(line)),
+        mgmt ? h('small', { class: 'muted' }, 'Until the receiving branch adds it as Cash Received, this money is in nobody’s register. It is not income or expense. ', h('a', { class: 'link', href: '#/all-vouchers?transfer=PENDING' }, 'See all')) : null));
+    }
+
     function fill(d, animate) {
+      paintTransit(d);
       const day = d.charts.daily14, tdy = day[day.length - 1], yst = day[day.length - 2] || { inPaise: 0, outPaise: 0, count: 0 };
       const ser = (f) => day.map(f);
       if (!mgmt) {
         K.bal.set(d.self.balancePaise, 'Opening ' + RW.fmtINR(d.self.openingPaise) + ' · ' + (d.self.registerId || ''), d.charts.balanceTrend30.map((x) => x.balancePaise));
-        K.in.set(d.periods.today.inPaise, 'Yesterday ' + RW.fmtINR(yst.inPaise), ser((x) => x.inPaise));
-        K.out.set(d.periods.today.outPaise, 'Yesterday ' + RW.fmtINR(yst.outPaise), ser((x) => x.outPaise));
+        const xt = d.periods.today;
+        K.in.set(xt.inPaise, xt.xInPaise ? 'Yesterday ' + RW.fmtINR(yst.inPaise) + ' · + ' + RW.fmtINR(xt.xInPaise) + ' transfer (not income)' : 'Yesterday ' + RW.fmtINR(yst.inPaise), ser((x) => x.inPaise));
+        K.out.set(xt.outPaise, xt.xOutPaise ? 'Yesterday ' + RW.fmtINR(yst.outPaise) + ' · ' + RW.fmtINR(xt.xOutPaise) + ' transfer sent (not expense)' : 'Yesterday ' + RW.fmtINR(yst.outPaise), ser((x) => x.outPaise));
         K.net.set(d.periods.today.netPaise, 'Yesterday ' + RW.fmtINR(yst.inPaise - yst.outPaise), ser((x) => x.inPaise - x.outPaise));
         K.cnt.set(d.periods.today.count, 'Yesterday ' + yst.count, ser((x) => x.count));
         UI.mount(periodsHost, ['week', 'month', 'year'].map((k) => {
@@ -206,8 +231,9 @@
         }));
       } else {
         const k = d.kpis, scoped = !!(d.scope && d.scope.branchId), nm = scoped ? d.scope.name : '';
-        K.in.set(k.inPaise, d.kpiRange.label, ser((x) => x.inPaise)); K.out.set(k.outPaise, d.kpiRange.label, ser((x) => x.outPaise)); K.net.set(k.netPaise, d.kpiRange.label);
-        K.bal.set(k.balancePaise, scoped ? 'Registers of ' + nm : 'Across all registers', d.charts.balanceTrend30.map((x) => x.balancePaise)); if (app.isAdmin) K.os.set(k.outstandingPaise || 0, scoped ? 'Receivable + payable · this branch' : 'Receivable + payable');
+        const xin = k.xInPaise ? ' · not counted: ' + RW.fmtINR(k.xInPaise) + ' transfers received' : '', xout = k.xOutPaise ? ' · not counted: ' + RW.fmtINR(k.xOutPaise) + ' transfers sent' : '';
+        K.in.set(k.inPaise, d.kpiRange.label + xin, ser((x) => x.inPaise)); K.out.set(k.outPaise, d.kpiRange.label + xout, ser((x) => x.outPaise)); K.net.set(k.netPaise, d.kpiRange.label);
+        K.bal.set(k.balancePaise, (scoped ? 'Registers of ' + nm : 'Across all registers') + (d.transit && d.transit.paise ? ' · + ' + RW.fmtINR(d.transit.paise) + ' on the way' : ''), d.charts.balanceTrend30.map((x) => x.balancePaise)); if (app.isAdmin) K.os.set(k.outstandingPaise || 0, scoped ? 'Receivable + payable · this branch' : 'Receivable + payable');
         K.cnt.set(k.count, d.kpiRange.label); K.users.set(k.activeUsers, scoped ? 'In this branch' : 'Can sign in today'); if (K.br) K.br.set(k.activeBranches);
         UI.mount(booksHost,
           h('div', { class: 'card-h' }, h('div', null, h('h3', null, scoped ? 'Accounts of ' + nm : app.seesAll ? 'Branch-wise accounts' : 'Accounts of your branch'),

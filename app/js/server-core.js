@@ -151,7 +151,35 @@
     /* Review state shown to the client: payments are PENDING until an admin marks them; receipts / cash received are not reviewed. */
     const reviewOf = (v) => (v.type === 'PAYMENT' ? v.review || 'PENDING' : 'NA');
     const vlabel = (v) => v.number || 'Cash Received';
-    function vView(s, v) {
+
+    /* ---- transfers: who sent what to whom, and has it arrived? ---- */
+    // ids of the transfer-out vouchers that a (still counted) transfer-in voucher has received
+    function receivedIds(s) {
+      const set = new Set();
+      for (const x of s.vouchers) if (x.transfer && x.type === 'RECEIPT' && x.transfer.link && counted(x)) set.add(x.transfer.link);
+      return set;
+    }
+    // transfer-out vouchers that are counted, not marked "already received" and not received yet = money on the way
+    function transfersPending(s) {
+      const got = receivedIds(s);
+      return s.vouchers.filter((v) => v.transfer && v.type === 'PAYMENT' && counted(v) && !v.transfer.settled && !got.has(v.id));
+    }
+    const xferWho = (s, branchId, userId) => {
+      const b = branchById(s, branchId), w = userId ? userById(s, userId) : null;
+      return { branchId: branchId || '', branchName: b ? b.name : (branchId ? 'Removed branch' : ''), userId: w ? w.id : '', userName: w ? w.fullName : '' };
+    };
+    function transferView(s, v, got) {
+      const t = v.transfer;
+      if (!t) return null;
+      if (v.type === 'PAYMENT') {
+        const g = got || receivedIds(s);
+        const received = g.has(v.id);
+        return Object.assign({ dir: 'OUT' }, xferWho(s, t.toBranchId, t.toUserId), { settled: !!t.settled, received: received || !!t.settled, pending: counted(v) && !received && !t.settled });
+      }
+      const out = t.link ? s.vouchers.find((x) => x.id === t.link) : null;
+      return Object.assign({ dir: 'IN' }, xferWho(s, t.fromBranchId, t.fromUserId), { link: t.link || '', linkNumber: out ? out.number || '' : '' });
+    }
+    function vView(s, v, got) {
       const b = branchById(s, v.branchId);
       const u = userById(s, v.userId);
       const cb = userById(s, v.createdBy);
@@ -168,6 +196,7 @@
         updatedBy: ub ? ub.fullName : '', voidReason: v.voidReason || '', version: v.version,
         review: reviewOf(v), counted: counted(v), reviewReason: v.reviewReason || '', reviewedAt: v.reviewedAt || null,
         reviewedBy: (userById(s, v.reviewedBy) || {}).fullName || '',
+        transfer: v.transfer ? transferView(s, v, got) : null,
       };
     }
 
@@ -213,20 +242,38 @@
     }
 
     /* Balance of one register up to (and excluding) `before` (YYYY-MM-DD) or overall. */
+    /* BRANCH TRANSFERS. Money one branch (or person) sends to another is not income and not expense: it only moves cash from one register to
+     * another. A PAYMENT carrying `transfer` is "transfer out" ({ toBranchId, toUserId, settled }); a RECEIPT carrying `transfer` is "transfer in"
+     * ({ fromBranchId, fromUserId, link: the id of the transfer-out voucher }). Every total therefore has four money figures:
+     *   inPaise / outPaise      real cash in / out (what a branch earns and spends)
+     *   xInPaise / xOutPaise    transfers received / sent
+     *   netPaise                inPaise - outPaise  (the result of the business)
+     *   movePaise               netPaise + xInPaise - xOutPaise  (how much the cash actually changed; balance = opening + movePaise)
+     * addFlow() is the one place that decides which of the four a voucher belongs to. */
+    const newFlow = () => ({ inPaise: 0, outPaise: 0, xInPaise: 0, xOutPaise: 0 });
+    function addFlow(t, v) {
+      if (v.type === 'RECEIPT') { if (v.transfer) t.xInPaise += v.amountPaise; else t.inPaise += v.amountPaise; }
+      else if (v.transfer) t.xOutPaise += v.amountPaise; else t.outPaise += v.amountPaise;
+      return t;
+    }
+    const flowNet = (t) => t.inPaise - t.outPaise;
+    const flowMove = (t) => t.inPaise - t.outPaise + t.xInPaise - t.xOutPaise;
+    const moveOf = (v) => (v.type === 'RECEIPT' ? v.amountPaise : -v.amountPaise);       // what one counted voucher does to a register
     function netFor(s, predicate) {
-      let i = 0, o = 0, n = 0;
+      const t = newFlow();
+      let n = 0;
       for (const v of s.vouchers) {
         if (!counted(v) || !predicate(v)) continue;
         n++;
-        if (v.type === 'RECEIPT') i += v.amountPaise; else o += v.amountPaise;
+        addFlow(t, v);
       }
-      return { inPaise: i, outPaise: o, count: n, netPaise: i - o };
+      return Object.assign(t, { count: n, netPaise: flowNet(t), movePaise: flowMove(t) });
     }
     const registerOf = (s, userId) => s.registers.find((r) => r.userId === userId) || null;
     function currentBalance(s, userId) {
       const r = registerOf(s, userId);
       const t = netFor(s, (v) => v.userId === userId);
-      return (r ? r.openingPaise : 0) + t.netPaise;
+      return (r ? r.openingPaise : 0) + t.movePaise;
     }
 
     /* -------------------------------------------------------- authentication */
@@ -276,7 +323,7 @@
     const H = {
       ApiError, def, M, storage, bus, iterations, clock, nowIso, todayIst, load, commit, emptyState, DEFAULT_SETTINGS,
       userById, branchById, isSuper, seesAll, isAdmin, level, requireRole, canSeeVoucher, canSeeUser, canSeeOwned, canAdminVoucher, scopeBranches,
-      pubUser, vView, counted, reviewOf, vlabel, audit, notify, checkPassword, makeCredentials, netFor, registerOf, currentBalance, authenticate,
+      pubUser, vView, counted, reviewOf, vlabel, audit, notify, checkPassword, makeCredentials, transfersPending, receivedIds, transferView, xferWho, netFor, newFlow, addFlow, flowNet, flowMove, moveOf, registerOf, currentBalance, authenticate,
       setupKey: String(opts.setupKey || '').trim(),   // optional: first-time setup on a public server needs this key
       beforeWipe: opts.beforeWipe || null,   // optional: a server with real storage makes a safety backup before "clear all data"
       beforeErase: opts.beforeErase || null,      // optional: ... and a (cheap, throttled) copy before any permanent delete of vouchers, users or branches

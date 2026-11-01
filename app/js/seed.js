@@ -168,6 +168,25 @@
       }
     }
 
+    /* -------- branch transfers: head office sends cash to Indore (received) and to Nagpur (still on the way) */
+    if (o.transfers !== false) {
+      const vno = (type) => { const nm = settings.numbering[type]; return nm.prefix + '-' + String(++s.counters[type]).padStart(nm.pad, '0'); };
+      const put = async (userId, x) => {
+        const u = s.users.find((w) => w.id === userId);
+        const at = iso(x.date, x.hour);
+        const v = Object.assign({
+          id: 'v_x' + String(s.vouchers.length + 1).padStart(4, '0'), seq: ++s.seq.voucher, branchId: u.branchId, userId, notes: '', attachmentIds: [], status: 'ACTIVE', locked: true,
+          createdAt: at, createdBy: userId, updatedAt: at, updatedBy: userId, version: 1, clientId: null, voidReason: '', amountInWords: RW.amountInWords(x.amountPaise),
+        }, x.v);
+        s.vouchers.push(v);
+        await H.audit({ state: s, user: u, meta: { device: o.device || 'Demo seed', ip: 'demo' } }, { at, entity: 'VOUCHER', entityId: v.id, entityLabel: v.number || 'Cash Received', action: 'CREATE', branchId: v.branchId, new: { number: v.number, type: v.type, date: v.date, partyName: v.partyName, amount: v.amountPaise / 100, transfer: x.label } });
+        return v;
+      };
+      const sent1 = await put('u_main', { date: RW.addDays(today, -3), hour: 11, amountPaise: 2500000, label: 'Transfer to Indore', v: { number: vno('PAYMENT'), type: 'PAYMENT', date: RW.addDays(today, -3), partyName: 'Ravi Water Flow Pump - Indore · Rahul Patel', particulars: 'Cash transfer to Indore for the monthly float', amountPaise: 2500000, transfer: { toBranchId: 'br_indore', toUserId: 'u_indore', settled: false }, review: 'VALID', reviewReason: '', reviewedAt: iso(RW.addDays(today, -3), 15), reviewedBy: 'u_admin' } });
+      await put('u_indore', { date: RW.addDays(today, -3), hour: 16, amountPaise: 2500000, label: 'Transfer from Main', v: { number: '', kind: 'RECEIVED', type: 'RECEIPT', date: RW.addDays(today, -3), partyName: 'Ravi Water Flow Pump · Suresh Mehta', particulars: 'Cash transfer received from head office (' + sent1.number + ')', amountPaise: 2500000, transfer: { fromBranchId: 'br_main', fromUserId: 'u_main', link: sent1.id } } });
+      await put('u_main', { date: RW.addDays(today, -1), hour: 12, amountPaise: 1200000, label: 'Transfer to Nagpur', v: { number: vno('PAYMENT'), type: 'PAYMENT', date: RW.addDays(today, -1), partyName: 'Ravi Water Flow Pump - Nagpur', particulars: 'Cash transfer to Nagpur for stock purchase', amountPaise: 1200000, transfer: { toBranchId: 'br_nagpur', toUserId: '', settled: false } } });
+    }
+
     /* -------- outstanding (dates relative to today so the demo never goes stale) */
     const os = (branchId, party, direction, amount, dueOffset, ref, settled, by) => {
       const o2 = {

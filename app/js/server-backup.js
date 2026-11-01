@@ -24,7 +24,7 @@
 
   const FORMAT = 'ravi-cash-backup';
   const VERSION = 1;
-  const APP = 'Ravi Cash 5.4';
+  const APP = 'Ravi Cash 5.5';
   const ROLES = ['SUPER_ADMIN', 'CEO', 'BRANCH_ADMIN', 'USER', 'VIEWER'];
   const CORE_LISTS = ['branches', 'users', 'registers', 'vouchers', 'attachments', 'statements', 'outstanding', 'notifications', 'audit'];
   const OPTIONAL_LISTS = ['tours', 'visits'];
@@ -38,7 +38,7 @@
     const arr = (k) => (Array.isArray(db && db[k]) ? db[k] : []);
     let inP = 0, outP = 0, first = '', last = '';
     for (const v of arr('vouchers')) {
-      if (v && v.status === 'ACTIVE' && v.review !== 'INVALID') { if (v.type === 'RECEIPT') inP += v.amountPaise || 0; else outP += v.amountPaise || 0; }
+      if (v && v.status === 'ACTIVE' && v.review !== 'INVALID') { if (v.transfer) { /* money moved between branches is neither cash in nor cash out */ } else if (v.type === 'RECEIPT') inP += v.amountPaise || 0; else outP += v.amountPaise || 0; }
       if (v && v.date) { if (!first || v.date < first) first = v.date; if (v.date > last) last = v.date; }
     }
     return {

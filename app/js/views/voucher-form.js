@@ -40,6 +40,40 @@
     const partsLabel = fParts.querySelector('label');
     fAmount.appendChild(words);
 
+    /* ------------------------------------------------------------ branch transfers
+     * Payment: "this money goes to another branch / person" (not an expense). Cash Received / Receipt: "this is money a branch sent me" (not income).
+     * Both lists come from the server; offline they are simply not offered. */
+    const xfer = { out: null, inn: null, picked: null, autoParty: false };
+    const xferHost = h('div');
+    const xferActive = () => (st.type === 'PAYMENT' ? !!(xfer.out && xfer.out.isOn()) : !!xfer.picked);
+    function drawTransfer() {
+      UI.mount(xferHost, st.type === 'PAYMENT' ? (xfer.out ? xfer.out.el : null) : (xfer.inn ? xfer.inn.el : null));
+      applyTransfer();
+    }
+    function applyTransfer() {
+      const outOn = st.type === 'PAYMENT' && xfer.out && xfer.out.isOn(), inPick = st.type !== 'PAYMENT' ? xfer.picked : null;
+      if (outOn) { party.value = xfer.out.label(); xfer.autoParty = true; }
+      else if (inPick) { party.value = inPick.from.branchName + (inPick.from.userName ? ' · ' + inPick.from.userName : ''); xfer.autoParty = true; }
+      else if (xfer.autoParty) { party.value = ''; xfer.autoParty = false; }
+      party.readOnly = !!(outOn || inPick); amount.readOnly = !!inPick;
+      if (inPick && amount.value.replace(/,/g, '') !== String(inPick.amountPaise / 100)) { amount.value = String(inPick.amountPaise / 100); amount.dispatchEvent(new Event('input')); }
+      partsLabel.firstChild.textContent = st.type === 'PAYMENT' ? (outOn ? 'Particulars (optional)' : 'Particulars / Payment For') : isRcvd() || inPick ? 'Particulars (optional)' : 'Particulars';
+      drawPreview();
+    }
+    async function loadTransfers() {
+      if (!RW.net.online) return;
+      try {
+        const [t, pend] = await Promise.all([RW.api.call('transfers.targets', {}), RW.api.call('transfers.pending', {})]);
+        if (t.branches.length) xfer.out = V.transferOutBox(t, { onChange: applyTransfer });
+        if (pend.rows.length) {
+          xfer.inn = V.transferInBox(pend, { onPick: (r) => { xfer.picked = r; applyTransfer(); } });
+          const want = p.q.transfer ? pend.rows.find((r) => r.id === p.q.transfer) : null;
+          if (want) { if (st.type === 'PAYMENT') { st.type = 'RECEIVED'; onType(); } xfer.inn.choose(want); }
+        }
+        drawTransfer();
+      } catch (e) { /* offline or an old server: the form works without transfers */ }
+    }
+
     /* ------------------------------------------------------------ preview */
     const previewHost = h('div');
     const draft = () => {
@@ -68,6 +102,9 @@
       rcvdHint.hidden = !rc;
       submitBtn.lastChild.textContent = rc ? 'Save Entry' : 'Save Voucher';
       submitBtn.className = 'btn btn-lg ' + (pay ? 'btn-primary' : 'btn-primary');
+      if (!pay && xfer.out && xfer.out.isOn()) xfer.out.set(null);
+      if (pay && xfer.picked && xfer.inn) xfer.inn.choose(null);
+      drawTransfer();
       checkBalance(); drawPreview();
     }
     function checkBalance() {
@@ -118,7 +155,8 @@
       let ok = true;
       const need = (f, cond, msg) => { fieldErr(f, cond ? '' : msg); if (!cond) ok = false; };
       need(fParty, party.value.trim().length >= 2, (st.type === 'PAYMENT' ? 'Paid To' : 'Received From') + ' is required');
-      need(fParts, isRcvd() || particulars.value.trim().length >= 3, 'Please describe the particulars (at least 3 characters)');
+      if (xfer.out && st.type === 'PAYMENT' && !xfer.out.check()) ok = false;
+      need(fParts, isRcvd() || xferActive() || particulars.value.trim().length >= 3, 'Please describe the particulars (at least 3 characters)');
       const paise = safePaise(amount.value.replace(/,/g, ''));
       need(fAmount, paise > 0, 'Enter an amount greater than 0');
       if (paise > S.maxVoucherAmountPaise) { fieldErr(fAmount, 'Amount cannot exceed ' + RW.fmtINR(S.maxVoucherAmountPaise)); ok = false; }
@@ -126,7 +164,11 @@
       if (!ok) { const bad = UI.$('.field.has-err', root); if (bad) { bad.scrollIntoView({ behavior: 'smooth', block: 'center' }); const i = bad.querySelector('input,textarea'); if (i) i.focus({ preventScroll: true }); } }
       return ok;
     }
-    const payload = () => ({ type: isRcvd() ? 'RECEIPT' : st.type, kind: isRcvd() ? 'RECEIVED' : undefined, date: date.value, partyName: party.value.trim(), particulars: particulars.value.trim(), notes: notes.value.trim(), amount: amount.value.replace(/,/g, ''), attachments: st.atts.map((a) => ({ name: a.name, mime: a.mime, dataUrl: a.dataUrl })) });
+    const transferPayload = () => {
+      if (st.type === 'PAYMENT') { const t = xfer.out && xfer.out.value(); return t ? { toBranchId: t.toBranchId, toUserId: t.toUserId } : undefined; }
+      return xfer.picked ? { link: xfer.picked.id } : undefined;
+    };
+    const payload = () => ({ type: isRcvd() ? 'RECEIPT' : st.type, kind: isRcvd() ? 'RECEIVED' : undefined, date: date.value, partyName: party.value.trim(), particulars: particulars.value.trim(), notes: notes.value.trim(), amount: amount.value.replace(/,/g, ''), transfer: transferPayload(), attachments: st.atts.map((a) => ({ name: a.name, mime: a.mime, dataUrl: a.dataUrl })) });
 
     async function submit(thenPdf) {
       if (st.saving) return;
@@ -136,7 +178,7 @@
       const ok = await UI.confirm({
         title: 'Save this ' + (pay ? 'payment voucher' : rc ? 'cash received entry' : 'cash receipt') + '?', icon: 'lock', ok: rc ? 'Save entry' : 'Save voucher',
         message: h('div', { class: 'stack', style: { gap: '10px' } },
-          h('dl', { class: 'kv' }, rc ? [h('dt', null, 'Entry'), h('dd', null, 'Cash Received (no voucher number)')] : null, h('dt', null, pay ? 'Paid to' : 'Received from'), h('dd', null, party.value.trim()), h('dt', null, 'Amount'), h('dd', null, h('b', null, RW.fmtINR2(paise)), h('div', { class: 'muted' }, RW.amountInWords(paise))), h('dt', null, 'Date'), h('dd', null, RW.fmtDate(date.value)), h('dt', null, 'Attachments'), h('dd', null, String(st.atts.length))),
+          h('dl', { class: 'kv' }, rc ? [h('dt', null, 'Entry'), h('dd', null, 'Cash Received (no voucher number)')] : null, h('dt', null, pay ? 'Paid to' : 'Received from'), h('dd', null, party.value.trim()), h('dt', null, 'Amount'), h('dd', null, h('b', null, RW.fmtINR2(paise)), h('div', { class: 'muted' }, RW.amountInWords(paise))), h('dt', null, 'Date'), h('dd', null, RW.fmtDate(date.value)), xferActive() ? [h('dt', null, 'Transfer'), h('dd', null, pay ? 'Sent to ' + party.value.trim() + ' — not counted as an expense' : 'Sent by ' + party.value.trim() + ' — not counted as income')] : null, h('dt', null, 'Attachments'), h('dd', null, String(st.atts.length))),
           h('div', { class: 'lockbar' }, UI.icon('lock', 15), h('span', null, 'After saving, this ' + (rc ? 'entry' : 'voucher') + ' is ', h('b', null, 'locked'), '. Only an administrator can correct it, and every change is recorded.'))),
       });
       if (!ok) return;
@@ -148,7 +190,8 @@
           if (!e || e.code) throw e;     // validation / permission errors are shown to the user
           return await saveOffline();    // network-type failure: keep the work safe on this device
         }
-        UI.toast(r.voucher.number ? r.voucher.number + ' saved and locked.' : 'Cash received entry saved — it is added to your cash balance.', 'success', { title: r.voucher.number ? 'Voucher created' : 'Cash received saved' });
+        if (r.voucher.transfer) UI.toast(r.voucher.transfer.dir === 'OUT' ? 'Transfer saved. ' + (r.voucher.transfer.branchName || 'The branch') + ' is told and can receive it now.' : 'Transfer received and added to your cash balance.', 'success', { title: 'Transfer' });
+        else UI.toast(r.voucher.number ? r.voucher.number + ' saved and locked.' : 'Cash received entry saved — it is added to your cash balance.', 'success', { title: r.voucher.number ? 'Voucher created' : 'Cash received saved' });
         location.hash = '#/vouchers/' + r.voucher.id + (thenPdf ? '?pdf=1' : '');
       } catch (e) {
         UI.mount(errBox, UI.icon('alert', 16), h('span', null, UI.errMsg(e))); errBox.hidden = false; errBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -172,7 +215,7 @@
 
     const form = h('form', { class: 'card', novalidate: true, onsubmit: (e) => { e.preventDefault(); submit(false); } },
       h('div', { class: 'card-b stack', style: { gap: '18px' } },
-        typeSeg, rcvdHint,
+        typeSeg, rcvdHint, xferHost,
         h('div', { class: 'form-grid' },
           fNum, fDate, fParty, h('div', { class: 'field' }, h('label', null, 'Cash register'), h('div', { class: 'vnum-auto', style: { borderStyle: 'solid' } }, UI.icon('wallet', 15), h('span', null, (app.register && app.register.id) || 'None'))),
           fParts, fAmount, h('div', { class: 'span2' }, balanceNote),
@@ -188,7 +231,7 @@
 
     root.appendChild(V.pageHead('Create Voucher', 'Record a cash payment, a cash receipt, or cash you received. It is saved instantly to your cash register.', null, { href: '#/vouchers', label: 'My Vouchers' }));
     root.appendChild(h('div', { class: 'grid g-form' }, form, h('div', { class: 'stack form-preview' }, h('div', { class: 'row sb' }, h('b', { style: { fontSize: '13px' } }, 'Live voucher preview'), h('span', { class: 'badge badge-gray' }, 'Draft')), previewHost)));
-    onType(); drawAtts();
+    onType(); drawAtts(); loadTransfers();
     party.focus({ preventScroll: true });
     return { dispose() { offNet(); drawPreview.cancel(); } };
   }, { roles: ['USER', 'BRANCH_ADMIN', 'SUPER_ADMIN'] });

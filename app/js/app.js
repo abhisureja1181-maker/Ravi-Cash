@@ -161,7 +161,7 @@
   }
 
   /* ------------------------------------------------------- notifications */
-  const KIND_ICON = { VOUCHER_CREATED: 'file', RECEIPT_CREATED: 'inflow', VOUCHER_EDITED: 'edit', VOUCHER_VOID: 'ban', VOUCHER_DELETED: 'trash', VOUCHER_REVIEW: 'check', STATEMENT_GENERATED: 'chart', USER_CREATED: 'users', USER_STATUS: 'user', TOUR_PLANNED: 'map', TOUR_PENDING: 'shield', TOUR_APPROVED: 'check', TOUR_EDITED: 'edit', TOUR_CANCELLED: 'ban', SYSTEM: 'alert' };
+  const KIND_ICON = { VOUCHER_CREATED: 'file', RECEIPT_CREATED: 'inflow', VOUCHER_EDITED: 'edit', VOUCHER_VOID: 'ban', VOUCHER_DELETED: 'trash', VOUCHER_REVIEW: 'check', STATEMENT_GENERATED: 'chart', USER_CREATED: 'users', USER_STATUS: 'user', TRANSFER_SENT: 'swap', TRANSFER_RECEIVED: 'check', TOUR_PLANNED: 'map', TOUR_PENDING: 'shield', TOUR_APPROVED: 'check', TOUR_EDITED: 'edit', TOUR_CANCELLED: 'ban', SYSTEM: 'alert' };
   V.notifItem = (n, onClick) => h('div', { class: 'item' + (n.read ? '' : ' unread'), style: { alignItems: 'flex-start', opacity: n.read ? 0.78 : 1 }, onclick: onClick },
     h('span', { class: 'kpi-ic', style: { flex: 'none', background: n.important ? 'var(--accent-soft)' : undefined, color: n.important ? 'var(--accent-ink)' : undefined } }, UI.icon(KIND_ICON[n.kind] || 'bell', 15)),
     h('div', { style: { minWidth: 0 } }, h('b', { style: { fontSize: '13px' } }, n.title), h('small', { style: { whiteSpace: 'normal', lineHeight: 1.4 } }, n.body), h('small', null, RW.timeAgo(n.at) + (n.branchName ? ' · ' + n.branchName : ''))),

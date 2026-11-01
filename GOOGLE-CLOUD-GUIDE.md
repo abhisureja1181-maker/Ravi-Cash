@@ -61,7 +61,7 @@ Bina naam ke HTTPS (padlock) nahi ban sakta, aur bina HTTPS ke phone me "Install
 VM instances list me `ravi-cash` ki row me **SSH** button dabayein. Popup me **Authorize** karein. Ek kali terminal window khulegi — yahi aapka server hai.
 
 ## Step 7 — App ki zip upload karein
-Terminal window ke upar-right me **⚙ (gear) → Upload file** → apne PC se **`ravi-cash-v5.4.1.zip`** (poori zip, "online-upload" wali nahi) chunein.
+Terminal window ke upar-right me **⚙ (gear) → Upload file** → apne PC se **`ravi-cash-v5.5.zip`** (poori zip, "online-upload" wali nahi) chunein.
 Wo server ke home folder me aa jati hai.
 
 ## Step 8 — Ek command se chalu karein
@@ -69,7 +69,7 @@ Terminal me ye lines ek-ek karke paste karein (Enter dabayein). `raviwater.duckd
 
 ```
 sudo apt-get update && sudo apt-get install -y unzip
-unzip -o ravi-cash-v5.4.1.zip
+unzip -o ravi-cash-v5.5.zip
 cd ravi-cash
 sudo bash deploy/gcp-setup.sh raviwater.duckdns.org
 ```
@@ -108,7 +108,7 @@ Android phone: Chrome me link kholein → login → (pehli baar naya password) �
   Phir **⚙ → Download file** → `ravicash-backup-<tareekh>.tar.gz` chunein aur PC par rakhein. Saath me *All Vouchers → Excel/CSV* export bhi kabhi-kabhi karein.
 * **Naya version lagana:** nayi zip **⚙ → Upload file** se bhejein, phir
   ```
-  unzip -o ravi-cash-v5.4.1.zip      (jo naam ho)
+  unzip -o ravi-cash-v5.5.zip      (jo naam ho)
   cd ravi-cash
   sudo docker compose up -d --build
   ```

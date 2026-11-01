@@ -68,6 +68,73 @@
   };
 
   /* Box shown on the voucher page: current review state + (for the main / Super admin only) the buttons. Returns null when not applicable. */
+  /* ---------------------------------------------------------- branch transfers (shared by the voucher form and the admin edit dialog) */
+  const branchLabel = (b) => b.name + (b.isMain ? ' (Main)' : '') + (b.mine ? ' — your branch' : '');
+  // Sending: "this money goes to another branch or person". value() is what vouchers.create / vouchers.edit expect.
+  V.transferOutBox = function (targets, o) {
+    o = o || {};
+    const on = h('input', { type: 'checkbox' });
+    const branch = h('select', null, h('option', { value: '' }, 'Choose a branch'), targets.branches.map((b) => h('option', { value: b.id }, branchLabel(b))));
+    const person = h('select', null);
+    const settled = h('input', { type: 'checkbox', checked: true });
+    const fBranch = UI.field('Send to branch', branch), fPerson = UI.field('Receiver', person);
+    const body = h('div', { class: 'stack xfer-body', style: { gap: '12px' }, hidden: true },
+      h('div', { class: 'form-grid' }, fBranch, fPerson),
+      o.settledChoice ? h('label', { class: 'opt-row' }, settled, h('span', null, 'The branch has already received this money', h('small', null, 'Tick this for old entries: nothing is shown as "on the way". Untick it if the branch still has to confirm it.'))) : null);
+    function fillPeople() {
+      const b = targets.branches.find((x) => x.id === branch.value);
+      UI.mount(person, h('option', { value: '' }, b && b.mine ? 'Choose the person' : 'Anyone in this branch can receive it'), b ? b.people.map((x) => h('option', { value: x.id }, x.name + ' — ' + UI.roleName(x.role) + (x.designation ? ' · ' + x.designation : ''))) : null);
+      person.disabled = !b;
+    }
+    const sync = () => { body.hidden = !on.checked; if (o.onChange) o.onChange(); };
+    on.addEventListener('change', sync); branch.addEventListener('change', () => { fillPeople(); sync(); }); person.addEventListener('change', sync);
+    fillPeople();
+    const el = h('div', { class: 'xfer-box' },
+      h('label', { class: 'opt-row' }, on, h('span', null, h('b', null, o.title || 'This money is for another branch or person (transfer)'), h('small', null, o.hint || 'It is then not counted as an expense. The receiver adds it as "Cash Received", and both registers match.'))),
+      body);
+    return {
+      el, isOn: () => on.checked,
+      set(t) { on.checked = !!t; if (t) { branch.value = t.branchId || ''; fillPeople(); person.value = t.userId || ''; settled.checked = t.settled !== false; } body.hidden = !on.checked; },
+      value: () => (on.checked ? { toBranchId: branch.value, toUserId: person.value || '', settled: settled.checked } : null),
+      label() { const b = targets.branches.find((x) => x.id === branch.value); const w = b && b.people.find((x) => x.id === person.value); return b ? b.name + (w ? ' · ' + w.name : '') : ''; },
+      check() {
+        if (!on.checked) return true;
+        UI.fieldError(fBranch, branch.value ? '' : 'Choose the branch');
+        const b = targets.branches.find((x) => x.id === branch.value);
+        const needPerson = !!b && b.mine && !person.value;
+        UI.fieldError(fPerson, needPerson ? 'Choose the person who receives it' : '');
+        return !!branch.value && !needPerson;
+      },
+    };
+  };
+  // Receiving: pick the transfer that is on the way to you. pick(null) = "this is something else".
+  V.transferInBox = function (pending, o) {
+    o = o || {};
+    let chosen = null;
+    const rows = pending.rows;
+    const list = h('div', { class: 'stack', style: { gap: '8px' } });
+    const draw = () => {
+      UI.mount(list,
+        rows.map((r) => h('label', { class: 'xfer-pick' + (chosen === r ? ' sel' : '') },
+          h('input', { type: 'radio', name: 'xfer-pick', checked: chosen === r, onchange: () => { chosen = r; draw(); if (o.onPick) o.onPick(r); } }),
+          h('span', { style: { flex: 1, minWidth: 0 } }, h('b', null, RW.fmtINR2(r.amountPaise)), ' from ', h('b', null, r.from.branchName + (r.from.userName ? ' · ' + r.from.userName : '')),
+            h('small', null, (r.number ? r.number + ' · ' : '') + RW.fmtDate(r.date) + (r.particulars ? ' · ' + r.particulars : '')))) ),
+        h('label', { class: 'xfer-pick' + (chosen === null ? ' sel' : '') },
+          h('input', { type: 'radio', name: 'xfer-pick', checked: chosen === null, onchange: () => { chosen = null; draw(); if (o.onPick) o.onPick(null); } }),
+          h('span', null, 'None of these — it is some other cash', h('small', null, 'It is then counted as income / cash received as before.'))));
+    };
+    draw();
+    const el = h('div', { class: 'xfer-box' }, h('div', { class: 'row', style: { gap: '8px', marginBottom: '8px' } }, UI.icon('swap', 16), h('b', null, rows.length === 1 ? 'Money was sent to you' : rows.length + ' amounts were sent to you')),
+      h('p', { class: 'muted', style: { margin: '0 0 10px', fontSize: '12.5px' } }, 'If this entry is that money, choose it. It is then not counted as income, and the sender’s register is matched with yours.'), list);
+    return { el, get chosen() { return chosen; }, choose(r) { chosen = r; draw(); if (o.onPick) o.onPick(r); }, linkValue: () => (chosen ? { link: chosen.id } : null) };
+  };
+  // the transfer line of a voucher: "Transfer to Indore · Rahul — on the way / received"
+  V.transferLine = function (t) {
+    if (!t) return null;
+    return h('span', null, h('span', { class: 'xfer-note' }, UI.icon('swap', 12), t.dir === 'OUT' ? 'Transfer out' : 'Transfer in'), ' ', UI.transferWho(t),
+      t.dir === 'OUT' ? [' · ', t.pending ? h('b', { class: 'xfer-wait' }, 'on the way, not received yet') : h('span', { class: 'muted' }, 'received')] : (t.linkNumber ? [' · ', h('span', { class: 'muted' }, 'for ' + t.linkNumber)] : null));
+  };
+
   V.reviewBox = function (v, canReview, onDone) {
     if (v.type !== 'PAYMENT' || v.status !== 'ACTIVE') return null;
     const cls = { VALID: 'is-valid', INVALID: 'is-invalid', PENDING: 'is-pending' }[v.review];
@@ -99,8 +166,10 @@
       const inn = v.type === 'RECEIPT', cls = v.status === 'VOID' ? 'void click' : 'click';
       const who = [o.showUser ? v.userName : null, o.showBranch ? V.branchShort(v) : null].filter(Boolean).join(' · ');
       const notCounted = v.status === 'ACTIVE' && v.counted === false; // marked "Not valid" in the audit review
-      const amt = h('td', { class: 'num keep' }, h('span', { class: (inn ? 'amt-in' : 'amt-out') + (notCounted ? ' amt-struck' : '') }, (inn ? '+ ' : '− ') + RW.fmtINR(v.amountPaise)),
-        o.compact && v.status === 'VOID' ? h('span', { class: 'sub' }, 'VOID') : null, notCounted ? h('span', { class: 'sub bad' }, 'Not valid') : null);
+      const xf = v.transfer;
+      const amt = h('td', { class: 'num keep' }, h('span', { class: (xf ? 'amt-xfer' : inn ? 'amt-in' : 'amt-out') + (notCounted ? ' amt-struck' : '') }, (inn ? '+ ' : '− ') + RW.fmtINR(v.amountPaise)),
+        o.compact && v.status === 'VOID' ? h('span', { class: 'sub' }, 'VOID') : null, notCounted ? h('span', { class: 'sub bad' }, 'Not valid') : null,
+        xf ? h('span', { class: 'sub' }, h('span', { class: 'xfer-note' }, UI.icon('swap', 11), xf.dir === 'OUT' ? (xf.pending ? 'Transfer · on the way' : 'Transfer out') : 'Transfer in')) : null);
       const tr = h('tr', { class: cls, tabindex: 0, onclick: () => open(v), onkeydown: (e) => { if (e.key === 'Enter') open(v); } });
       if (sel) {
         const cb = h('input', { type: 'checkbox', 'aria-label': 'Select ' + v.label });
@@ -114,7 +183,7 @@
         tr.appendChild(amt);
       } else {
         tr.appendChild(h('td', { class: 'keep' }, V.vno(v), h('span', { class: 'sub' }, RW.fmtDate(v.date))));
-        tr.appendChild(h('td', { class: 'hide-m' }, UI.typeBadge(v.type, v.kind)));
+        tr.appendChild(h('td', { class: 'hide-m' }, UI.typeBadge(v.type, v.kind, v.transfer)));
         tr.appendChild(h('td', { class: 'trunc full', 'data-label': inn ? 'Received from' : 'Paid to' }, v.partyName, h('span', { class: 'sub' }, v.particulars)));
         if (o.showUser) tr.appendChild(h('td', { class: 'hide-m nowrap' }, v.userName));
         if (o.showBranch) tr.appendChild(h('td', { class: 'hide-m nowrap' }, V.branchShort(v)));

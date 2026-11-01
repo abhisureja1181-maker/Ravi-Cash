@@ -7,7 +7,7 @@
   const { h } = UI;
 
   const ACTION_ICON = { CREATE: 'plus', EDIT: 'edit', VOID: 'ban', DELETE: 'trash', ATTACH: 'clip', ATTACH_REMOVED: 'x', PDF: 'download', REVIEW: 'check' };
-  const FIELD_LABEL = { date: 'Date', partyName: 'Party', particulars: 'Particulars', notes: 'Notes', amount: 'Amount (₹)', status: 'Status', review: 'Audit review', counted: 'Counted as expense', receivedFrom: 'Received from', kind: 'Entry', name: 'File', number: 'Number', type: 'Type' };
+  const FIELD_LABEL = { date: 'Date', partyName: 'Party', particulars: 'Particulars', notes: 'Notes', amount: 'Amount (₹)', status: 'Status', review: 'Audit review', transfer: 'Branch transfer', counted: 'Counted as expense', receivedFrom: 'Received from', kind: 'Entry', name: 'File', number: 'Number', type: 'Type' };
   const showVal = (k, v) => (k === 'counted' ? (v ? 'Yes' : 'No') : k === 'date' ? RW.fmtDate(v) : k === 'amount' ? RW.fmtINR2(Math.round(Number(v) * 100)) : String(v === null || v === undefined || v === '' ? '—' : v));
 
   RW.route('/vouchers/:id', async function (root, p, app) {
@@ -50,15 +50,45 @@
       const words = h('div', { class: 'amount-words' }, v.amountInWords);
       amt.addEventListener('input', () => { try { words.textContent = RW.amountInWords(RW.toPaise(amt.value.replace(/,/g, ''))); } catch (e) { words.textContent = ''; } });
       const r = reasonField();
+      /* Branch transfer (main admin): mark an old entry as a transfer so it stops counting as expense / income, link it to the money that was sent, or take the mark off */
+      const xferHostEd = h('div'), xs = { out: null, sel: null, rows: [] };
+      (async () => {
+        try {
+          const t = await RW.api.call('transfers.targets', { asUserId: v.userId });
+          if (v.type === 'PAYMENT') {
+            xs.out = V.transferOutBox(t, { settledChoice: true, title: 'This payment was money sent to another branch or person (transfer)', hint: 'It then stops counting as an expense. The branch receives it by adding "Cash Received".' });
+            if (v.transfer) xs.out.set({ branchId: v.transfer.branchId, userId: v.transfer.userId, settled: v.transfer.settled });
+            UI.mount(xferHostEd, xs.out.el);
+          } else {
+            const pend = await RW.api.call('transfers.pending', { all: true });
+            const opts = [h('option', { value: '' }, 'Not a transfer — counted as income')];
+            if (v.transfer && v.transfer.link) opts.push(h('option', { value: 'link:' + v.transfer.link }, 'Linked to ' + (v.transfer.linkNumber || 'a transfer') + ' (' + UI.transferWho(v.transfer) + ')'));
+            pend.rows.forEach((x) => opts.push(h('option', { value: 'link:' + x.id }, 'Received transfer ' + (x.number || '') + ' · ' + RW.fmtINR(x.amountPaise) + ' ' + UI.transferWho({ dir: 'IN', branchName: x.from.branchName, userName: x.from.userName }) + ' → ' + x.to.branchName)));
+            t.branches.forEach((b) => opts.push(h('option', { value: 'branch:' + b.id }, 'Money from branch: ' + b.name + ' (not linked to a payment)')));
+            xs.sel = h('select', null, opts);
+            xs.sel.value = v.transfer ? (v.transfer.link ? 'link:' + v.transfer.link : 'branch:' + v.transfer.branchId) : '';
+            UI.mount(xferHostEd, h('div', { class: 'xfer-box' }, UI.field('Is this money a branch transfer?', xs.sel, { hint: 'A transfer is not income. Choose the payment it belongs to, or only the branch it came from.' })));
+          }
+        } catch (e) { /* no transfer section if the server cannot be reached */ }
+      })();
       UI.modal({
         title: 'Edit ' + v.label, size: 'md',
         body: h('div', { class: 'stack', style: { gap: '14px' } },
           h('div', { class: 'callout warn' }, UI.icon('alert', 16), h('span', null, (v.number ? 'You can also change the voucher number (it must stay unique).' : 'This entry has no voucher number.') + ' The old and new values, your name and the reason are recorded permanently.')),
           h('div', { class: 'form-grid' }, num ? UI.field('Voucher number', num, { class: 'span2', hint: 'Only the main admin can change it. Another voucher must not already use it.' }) : null, UI.field('Date', date), UI.field(v.type === 'PAYMENT' ? 'Paid To' : 'Received From', party), UI.field('Particulars', parts, { class: 'span2' }), UI.field('Amount (₹)', amt, { class: 'span2' }), h('div', { class: 'span2' }, words), UI.field('Notes', notes, { optional: true, class: 'span2' })),
-          r.f),
+          xferHostEd, r.f),
         actions: [{ label: 'Cancel' }, { label: 'Save correction', kind: 'primary', icon: 'check', keepOpen: true, onClick: async (m) => {
           if (!needReason(r)) return false;
           const patch = {};
+          if (xs.out) {
+            if (!xs.out.check()) return false;
+            const nv = xs.out.value(), cur = v.transfer;
+            if (!nv && cur) patch.transfer = null;
+            else if (nv && (!cur || cur.branchId !== nv.toBranchId || (cur.userId || '') !== (nv.toUserId || '') || !!cur.settled !== !!nv.settled)) patch.transfer = nv;
+          } else if (xs.sel) {
+            const val = xs.sel.value, cur = v.transfer ? (v.transfer.link ? 'link:' + v.transfer.link : 'branch:' + v.transfer.branchId) : '';
+            if (val !== cur) patch.transfer = !val ? null : val.startsWith('link:') ? { link: val.slice(5) } : { fromBranchId: val.slice(7) };
+          }
           if (num && num.value.trim().toUpperCase() !== v.number) patch.number = num.value;
           if (date.value !== v.date) patch.date = date.value;
           if (party.value.trim() !== v.partyName) patch.partyName = party.value;
@@ -161,10 +191,11 @@
         h('div', { class: 'card-b' }, d.attachments.length ? h('div', { class: 'att-grid' }, d.attachments.map((a) => attTile(d, a))) : h('p', { class: 'muted' }, 'Nothing attached.'), fileIn));
 
       const info = h('div', { class: 'card' }, h('div', { class: 'card-h' }, h('h3', null, 'Details')), h('div', { class: 'card-b' }, h('dl', { class: 'kv' },
-        h('dt', null, v.kind === 'RECEIVED' ? 'Entry' : 'Voucher'), h('dd', null, v.number ? [h('b', null, v.number), ' '] : null, UI.typeBadge(v.type, v.kind), ' ', UI.statusBadge(v.status)),
+        h('dt', null, v.kind === 'RECEIVED' ? 'Entry' : 'Voucher'), h('dd', null, v.number ? [h('b', null, v.number), ' '] : null, UI.typeBadge(v.type, v.kind, v.transfer), ' ', UI.statusBadge(v.status)),
+        v.transfer ? [h('dt', null, 'Branch transfer'), h('dd', null, V.transferLine(v.transfer), h('div', { class: 'muted', style: { fontSize: '12px', marginTop: '2px' } }, 'Not counted as ' + (inn ? 'income' : 'an expense') + ' — it only moves cash between registers.'))] : null,
         v.kind === 'RECEIVED' ? [h('dt', null, 'Voucher no.'), h('dd', null, h('span', { class: 'muted' }, 'None — cash received entries are not numbered'))] : null,
         h('dt', null, inn ? 'Received from' : 'Paid to'), h('dd', null, v.partyName),
-        h('dt', null, 'Amount'), h('dd', null, h('b', { class: inn ? 'amt-in' : 'amt-out' }, (inn ? '+ ' : '− ') + RW.fmtINR2(v.amountPaise))),
+        h('dt', null, 'Amount'), h('dd', null, h('b', { class: v.transfer ? 'amt-xfer' : inn ? 'amt-in' : 'amt-out' }, (inn ? '+ ' : '− ') + RW.fmtINR2(v.amountPaise))),
         h('dt', null, 'Date'), h('dd', null, RW.fmtDate(v.date)),
         h('dt', null, 'Branch'), h('dd', null, v.branchName),
         h('dt', null, 'Cash register'), h('dd', null, v.registerId + ' · ' + v.userName),
@@ -175,7 +206,7 @@
       const tl = h('div', { class: 'card' }, h('div', { class: 'card-h' }, h('h3', null, 'Activity timeline', h('small', null, 'Who did what, and when — history cannot be changed'))), h('div', { class: 'card-b' }, timeline(d)));
 
       UI.mount(host,
-        V.pageHead(v.label, RW.fmtDate(v.date) + ' · ' + UI.typeLabel(v.type, v.kind) + ' · ' + v.branchName, acts, back),
+        V.pageHead(v.label, RW.fmtDate(v.date) + ' · ' + UI.typeLabel(v.type, v.kind, v.transfer) + ' · ' + v.branchName, acts, back),
         h('div', { class: 'grid g-form' },
           h('div', { class: 'stack' }, lock, V.reviewBox(v, app.isSuper, () => load()), h('div', { class: 'print-area' }, V.voucherSvg(v, d.company))),
           h('div', { class: 'stack' }, info, attCard, tl)));

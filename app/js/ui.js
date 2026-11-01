@@ -90,6 +90,7 @@
     calendar: 'M5 4h14a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM16 2v4M8 2v4M3 10h18',
     inflow: 'M17 7 7 17M7 8v9h9',
     outflow: 'M7 17 17 7M8 7h9v9',
+    swap: 'M7 4 3 8l4 4M3 8h15M17 20l4-4-4-4M21 16H6',
     rupee: 'M6 3h12M6 8h12M9 13h-3 3a5 5 0 0 0 0-10M6 13l8.5 8',
     key: 'M21 2l-2 2m-7.6 7.6a5.5 5.5 0 1 1-7.8 7.8 5.5 5.5 0 0 1 7.8-7.8zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4',
     history: 'M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5M12 7v5l4 2',
@@ -226,8 +227,13 @@
   UI.userStatusBadge = (s) => UI.badge(s, s === 'ACTIVE' ? 'green' : s === 'SUSPENDED' ? 'red' : 'gray');
   UI.roleName = (r) => ({ SUPER_ADMIN: 'Super Admin', CEO: 'CEO', BRANCH_ADMIN: 'Branch Admin', USER: 'Branch User', VIEWER: 'Viewer' }[r] || r);
   // kind === 'RECEIVED' is "Cash Received": money handed to a user, stored as a receipt but without a voucher number
-  UI.typeLabel = (t, kind) => (kind === 'RECEIVED' ? 'Cash Received' : t === 'PAYMENT' ? 'Cash Payment' : 'Cash Receipt');
-  UI.typeBadge = (t, kind) => h('span', { class: 'type-pill ' + (t === 'PAYMENT' ? 'out' : 'in') }, UI.icon(kind === 'RECEIVED' ? 'wallet' : t === 'PAYMENT' ? 'outflow' : 'inflow', 12), kind === 'RECEIVED' ? 'Received' : t === 'PAYMENT' ? 'Payment' : 'Receipt');
+  // `tr` (the voucher's transfer info) turns a payment / receipt into "Transfer out / in": money moved between branches or people, not expense or income
+  UI.typeLabel = (t, kind, tr) => (tr ? (t === 'PAYMENT' ? 'Transfer Out' : 'Transfer In') : kind === 'RECEIVED' ? 'Cash Received' : t === 'PAYMENT' ? 'Cash Payment' : 'Cash Receipt');
+  UI.typeBadge = (t, kind, tr) => (tr
+    ? h('span', { class: 'type-pill xfer' }, UI.icon('swap', 12), t === 'PAYMENT' ? 'Transfer out' : 'Transfer in')
+    : h('span', { class: 'type-pill ' + (t === 'PAYMENT' ? 'out' : 'in') }, UI.icon(kind === 'RECEIVED' ? 'wallet' : t === 'PAYMENT' ? 'outflow' : 'inflow', 12), kind === 'RECEIVED' ? 'Received' : t === 'PAYMENT' ? 'Payment' : 'Receipt'));
+  // "to Indore · Rahul" / "from Main · Suresh" for a transfer
+  UI.transferWho = (tr) => (tr ? (tr.dir === 'OUT' ? 'to ' : 'from ') + (tr.branchName || 'a branch') + (tr.userName ? ' · ' + tr.userName : '') : '');
   // audit review of a payment: VALID counts as expense, INVALID ("Not valid") does not, PENDING is not reviewed yet
   UI.reviewLabel = (r) => ({ VALID: 'Valid', INVALID: 'Not valid', PENDING: 'To review' }[r] || '');
   UI.reviewBadge = (r) => (r === 'VALID' ? UI.badge('VALID', 'green', 'check') : r === 'INVALID' ? UI.badge('NOT VALID', 'red', 'ban') : r === 'PENDING' ? UI.badge('TO REVIEW', 'amber', 'clock') : null);

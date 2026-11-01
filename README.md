@@ -80,6 +80,13 @@ users/branches lose access immediately.
 
 * **Company logo** — the Ravi water flow PUMP logo (`app/img/logo.jpg`, `logo-mark.jpg`) is on the voucher (screen, print and PDF), on every statement / report PDF,
   on the sign-in page, in the menu and in the phone-app icon. To change it, replace those two files (white background, JPEG) and the icons in `app/icons/`.
+* **Branch transfers** (new in 5.5) — money sent from head office to a branch (or the other way round, or between two people) is **not an expense and not income**; it only moves cash from one register to another.
+  * **Sending:** on *Create Voucher → Cash Payment* tick **"This money is for another branch or person (transfer)"**, choose the branch (and, if you want, the person who must receive it). The voucher gets its normal number, the sender's register goes down, the receiver is notified.
+  * **Receiving:** the receiver sees *"Money was sent to you"* on the dashboard (button **I received it**) and in *Cash Received / Cash Receipt* a list of what is on the way. Picking it fills party and amount (the amount must match exactly), their register goes up, the sender is told it arrived.
+  * **Totals:** *Total Cash Inflow / Outflow*, reports, the CEO dashboard and the books never count transfers. They are shown on their own (*Transfers* column in the books, a note under the KPIs). Cash balance counts them, so every register and branch still adds up, and company cash in hand is unchanged once a transfer is received.
+  * **On the way:** money that was sent but not received yet is shown as *"+ ₹X on the way"* under Cash In Hand and listed on the dashboard (it is in nobody's register until it is received). Filter *Branch transfers* on the voucher lists shows only transfers / only the ones still on the way.
+  * **Old entries:** the main admin can open an old payment or Cash Received → *Edit* → mark it as a transfer (or link a received entry to the payment that was sent, or take the mark off). It is saved in the audit log with a reason, and the totals change at once.
+  * Marking a payment *Not valid*, or voiding the receiving entry, puts the transfer back to "on the way" / cancels it, so the books never keep half a transfer.
 * **Backup & Restore** (new in 5.4, main admin only — menu *Backup*):
   * **Download backup file** — one `.json` file with everything: branches, users (their password *hashes*, never the passwords), vouchers, registers, statements, outstanding, tours, notifications, the audit trail, settings
     and, if ticked, the receipt and meeting photos. Save it in Google Drive, your email or a pen drive. The file is sealed with a checksum, so a damaged or hand-edited file is refused. **Keep it private.**
@@ -281,7 +288,7 @@ Copy the new files over, run `npm run build` (this stamps a new version so insta
 ## 5. Tests
 
 ```bash
-npm test          # 113 tests: business rules, HTTP server, storage, exports, live location, static-app integrity
+npm test          # 121 tests: business rules, HTTP server, storage, exports, live location, static-app integrity
 npm run test:db   # database tests on a throw-away local PostgreSQL (needs postgres 15/16 server binaries)
 ```
 

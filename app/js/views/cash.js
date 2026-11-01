@@ -14,8 +14,8 @@
 
   V.cashCards = (r) => h('div', { class: 'grid g-kpi5' },
     V.kpi({ label: 'Opening Balance', icon: 'wallet', money: true, signed: true, value: r.openingPaise, sub: 'Brought forward' }),
-    V.kpi({ label: 'Cash Inflow', icon: 'inflow', tone: 'in', money: true, value: r.inPaise, sub: r.receivedPaise ? 'incl. ' + RW.fmtINR(r.receivedPaise) + ' cash received' : 'Receipts' }),
-    V.kpi({ label: 'Cash Outflow', icon: 'outflow', tone: 'out', money: true, value: r.outPaise, sub: r.notValidCount ? 'Payments · ' + r.notValidCount + ' not valid (' + RW.fmtINR(r.notValidPaise) + ' not counted)' : 'Payments' }),
+    V.kpi({ label: 'Cash Inflow', icon: 'inflow', tone: 'in', money: true, value: r.inPaise, sub: [r.receivedPaise ? 'incl. ' + RW.fmtINR(r.receivedPaise) + ' cash received' : '', r.xInPaise ? 'incl. ' + RW.fmtINR(r.xInPaise) + ' transfer received' : ''].filter(Boolean).join(' · ') || 'Receipts' }),
+    V.kpi({ label: 'Cash Outflow', icon: 'outflow', tone: 'out', money: true, value: r.outPaise, sub: [r.notValidCount ? 'Payments · ' + r.notValidCount + ' not valid (' + RW.fmtINR(r.notValidPaise) + ' not counted)' : 'Payments', r.xOutPaise ? 'incl. ' + RW.fmtINR(r.xOutPaise) + ' transfer sent' : ''].filter(Boolean).join(' · ') }),
     V.kpi({ label: 'Closing Balance', icon: 'rupee', hero: true, money: true, signed: true, value: r.closingPaise, sub: 'Opening + In − Out' }),
     V.kpi({ label: 'Entries', icon: 'file', value: r.count, sub: [r.voidedCount ? r.voidedCount + ' voided' : '', r.notValidCount ? r.notValidCount + ' not valid' : ''].filter(Boolean).join(' · ') + ([r.voidedCount, r.notValidCount].some(Boolean) ? ' (excluded)' : 'No voided vouchers') }));
 
@@ -28,10 +28,10 @@
     const more = h('div', { style: { textAlign: 'center', padding: '12px' } });
     const row = (x) => h('tr', { class: 'click', tabindex: 0, onclick: () => (location.hash = '#/vouchers/' + x.id), onkeydown: (e) => { if (e.key === 'Enter') location.hash = '#/vouchers/' + x.id; } },
       h('td', { class: 'keep nowrap' }, V.vno(x), h('span', { class: 'sub' }, RW.fmtDate(x.date))),
-      h('td', { class: 'hide-m nowrap' }, UI.typeBadge(x.type, x.kind)),
-      h('td', { class: 'trunc full', 'data-label': x.type === 'RECEIPT' ? 'Received from' : 'Paid to' }, x.partyName, h('span', { class: 'sub' }, x.particulars)),
-      h('td', { class: 'num', 'data-label': 'Cash in' }, x.inPaise ? h('span', { class: 'amt-in' }, money(x.inPaise)) : h('span', { class: 'muted' }, '–')),
-      h('td', { class: 'num', 'data-label': 'Cash out' }, x.notValid ? h('span', { class: 'sub bad' }, 'Not valid · ', h('s', null, money(x.amountPaise))) : x.outPaise ? h('span', { class: 'amt-out' }, money(x.outPaise)) : h('span', { class: 'muted' }, '–')),
+      h('td', { class: 'hide-m nowrap' }, UI.typeBadge(x.type, x.kind, x.transfer)),
+      h('td', { class: 'trunc full', 'data-label': x.type === 'RECEIPT' ? 'Received from' : 'Paid to' }, x.partyName, h('span', { class: 'sub' }, x.particulars), x.transfer ? h('span', { class: 'sub' }, V.transferLine(x.transfer)) : null),
+      h('td', { class: 'num', 'data-label': 'Cash in' }, x.inPaise ? h('span', { class: x.transfer ? 'amt-xfer' : 'amt-in' }, money(x.inPaise)) : h('span', { class: 'muted' }, '–')),
+      h('td', { class: 'num', 'data-label': 'Cash out' }, x.notValid ? h('span', { class: 'sub bad' }, 'Not valid · ', h('s', null, money(x.amountPaise))) : x.outPaise ? h('span', { class: x.transfer ? 'amt-xfer' : 'amt-out' }, money(x.outPaise)) : h('span', { class: 'muted' }, '–')),
       h('td', { class: 'num keep', 'data-label': 'Balance' }, h('b', { class: x.balancePaise < 0 ? 'neg' : '' }, money(x.balancePaise))));
     const next = () => {
       r.rows.slice(shown, shown + CH).forEach((x) => body.appendChild(row(x)));
